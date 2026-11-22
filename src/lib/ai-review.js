@@ -27,7 +27,7 @@ export function analyzeText(text) {
 export function reviewApplication(fields) {
   const entries = Object.entries(fields ?? {}).filter(([, value]) => String(value).trim());
   const wordCount = entries.reduce((sum, [, value]) => sum + (String(value).match(/[\p{L}\p{N}’'-]+/gu) ?? []).length, 0);
-  const applicationScore = Math.max(1, Math.min(100, Math.round(20 + entries.length * 12 + Math.min(wordCount, 250) * 0.18)));
+  const applicationScore = Math.max(1, Math.min(100, Math.round(1 + entries.length * 14 + Math.min(wordCount, 250) * 0.18)));
   const fieldReviews = entries.map(([label, value]) => ({ label, ...analyzeText(value) }));
   const usable = fieldReviews.map((review) => review.score).filter((score) => score != null);
   const patternScore = usable.length ? Math.round(usable.reduce((sum, score) => sum + score, 0) / usable.length) : null;
