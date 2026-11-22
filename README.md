@@ -26,6 +26,12 @@ The ticket channel includes close, claim, per-field text-pattern review, private
 
 No external AI detector or AI API is enabled. The built-in review provides a transparent rule-based text-pattern indicator and a separate basic completeness score; it does not establish AI authorship. Scores can be wrong and must not be used as proof or as the sole reason to reject an application. Short text is marked insufficient. The semicircle is a visual indicator, not a probability chart.
 
+## Command access
+
+The only built-in owner is Discord user ID `1191814686644117537`. The owner can use all ticket administration slash commands and is the only person who can run `/grantrole` or `/revokerole`. Use `/grantrole role:<role>` to allow a role to use panel administration commands in the current server; use `/revokerole` to remove that access. Grants are stored in SQLite separately for each server. Ticket staff roles configured on a panel do not automatically receive command administration access.
+
+After updating, run `npm run deploy:commands` so Discord registers `/grantrole`, `/revokerole`, and the updated command access settings. `DISCORD_TOKEN` is the only required environment variable.
+
 ## Development
 
 Run `npm run check` for syntax checks across all JavaScript files. SQLite data is stored under `data/` by default and is ignored by Git.
