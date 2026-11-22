@@ -1,13 +1,13 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 export function openDatabase(filePath) {
   const absolutePath = resolve(filePath);
   mkdirSync(dirname(absolutePath), { recursive: true });
-  const db = new Database(absolutePath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  const db = new DatabaseSync(absolutePath);
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA foreign_keys = ON;');
   db.exec(`
     CREATE TABLE IF NOT EXISTS panels (
       id TEXT PRIMARY KEY,
