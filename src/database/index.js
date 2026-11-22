@@ -35,6 +35,13 @@ export function openDatabase(filePath) {
     );
     CREATE INDEX IF NOT EXISTS tickets_opener_status ON tickets(opener_id, status);
     CREATE INDEX IF NOT EXISTS tickets_guild_status ON tickets(guild_id, status);
+    CREATE TABLE IF NOT EXISTS authorized_admin_roles (
+      guild_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      granted_by TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, role_id)
+    );
   `);
   const ticketColumns = db.prepare('PRAGMA table_info(tickets)').all().map((column) => column.name);
   if (!ticketColumns.includes('submission_json')) db.exec("ALTER TABLE tickets ADD COLUMN submission_json TEXT NOT NULL DEFAULT '{}'");
