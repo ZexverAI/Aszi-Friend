@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 export default {
-  data: new SlashCommandBuilder().setName('setuppanel').setDescription('Create a private ticket panel draft (does not post it to a channel).').setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+  data: new SlashCommandBuilder().setName('setuppanel').setDescription('Create a private ticket panel draft (does not post it to a channel).'),
   async execute(interaction, { db }) {
     const modal = new ModalBuilder().setCustomId('panel:create').setTitle('Set up ticket panel');
     const name = new TextInputBuilder().setCustomId('name').setLabel('Panel name').setStyle(TextInputStyle.Short).setMaxLength(80).setRequired(true);
