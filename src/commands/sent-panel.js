@@ -62,7 +62,8 @@ export default {
     updatePanelConfig(db, panel.id, config);
 
     const title = interaction.options.getString('title') || 'Aszi Friend Support';
-    const description = interaction.options.getString('description') || 'Before creating a ticket, please read the FAQ and familiarize yourself with the server rules.\n\nFAQ: <#1574181136026964180>\n\nChoose the topic that best matches your request after clicking below.';
+    const customDescription = interaction.options.getString('description') || 'Choose the topic that best matches your request after clicking below.';
+    const description = `${customDescription}${nl}${nl}Before creating a ticket, please read the FAQ and familiarize yourself with the server rules.${nl}FAQ: <#1574181136026964180>`;
     const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(0x5865f2);
     const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`panel:create:${panel.id}`).setLabel('Create Ticket').setEmoji('🎫').setStyle(ButtonStyle.Primary));
     await interaction.channel.send({ embeds: [embed], components: [row] });
