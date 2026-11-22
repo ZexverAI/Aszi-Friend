@@ -56,8 +56,15 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
 
   const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
-  const details = Object.entries(answers).map(([label, value]) => `**${label}:** ${String(value).slice(0, 1000)}`).join('\n');
-  const embed = new EmbedBuilder().setTitle(topic.name).setDescription(details || 'No additional details provided.').setColor(0x5865f2);
+  const answerFields = Object.entries(answers).flatMap(([label, value]) => {
+    const text = String(value ?? '');
+    const chunks = text.match(/[\\s\\S]{1,1000}/g) ?? ['—'];
+    return chunks.map((chunk, index) => ({ name: `${label.slice(0, 200)}${chunks.length > 1 ? ` (part ${index + 1})` : ''}`.slice(0, 256), value: chunk || '—' }));
+  });
+  for (let i = 0; i < answerFields.length; i += 5) {
+    const embed = new EmbedBuilder().setTitle(topic.name.slice(0, 256)).addFields(answerFields.slice(i, i + 5)).setColor(0x5865f2);
+    await channel.send({ embeds: [embed] });
+  }
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`ticket:close:${ticketId}`).setLabel(t(language, 'close')).setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`ticket:claim:${ticketId}`).setLabel(t(language, 'claim')).setStyle(ButtonStyle.Primary),
@@ -66,7 +73,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary),
   );
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1]}`].filter(Boolean).join('\n'), embeds: [embed], components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  const priorityLabel = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1];
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${priorityLabel}`].filter(Boolean).join('\\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
 
