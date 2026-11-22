@@ -1,8 +1,8 @@
-import { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 export default {
   data: new SlashCommandBuilder().setName('addtopic').setDescription('Add a topic and its form fields to a panel draft.')
     .addStringOption((option) => option.setName('panel_id').setDescription('Panel ID from /listpanels').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    ,
   async execute(interaction, { db }) {
     const panelId = interaction.options.getString('panel_id', true);
     if (!db.prepare('SELECT id FROM panels WHERE id = ? AND guild_id = ?').get(panelId, interaction.guildId)) return interaction.reply({ content: 'Panel not found in this server.', ephemeral: true });
