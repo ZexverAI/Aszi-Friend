@@ -130,9 +130,9 @@ export default async function handleInteraction(interaction, context) {
       if (panel.config.aiDetector === false || panel.config.topics.find((item) => item.id === ticket.topic_id)?.aiDetector === false) return interaction.reply({ content: 'Text pattern review is disabled for this topic.', ephemeral: true });
       const answers = JSON.parse(ticket.submission_json || '{}');
       const result = reviewApplication(answers);
-      const fieldSummary = result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\\n');
-      const patternText = result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum per field).' : `Text pattern indicator: ${result.patternScore}/100. This is not an AI probability or proof of authorship.\\n\\n${renderSemicircle(result.patternScore)}`;
-      const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness score: ${result.applicationScore}/100 (a basic completeness heuristic, not an AI assessment).\\n\\n${patternText}\\n\\n${result.reasons.map((reason) => `• ${reason}`).join('\\n')}\\n\\nPer-field review:\\n${fieldSummary || 'No form answers to review.'}\\n\\nDo not use these indicators alone to judge or reject an applicant.`).setColor(0x5865f2);
+      const fieldSummary = result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\n');
+      const patternText = result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum per field).' : `Text pattern indicator: ${result.patternScore}/100. This is not an AI probability or proof of authorship.\n\n${renderSemicircle(result.patternScore)}`;
+      const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness score: ${result.applicationScore}/100 (a basic completeness heuristic, not an AI assessment).\n\n${patternText}\n\n${result.reasons.map((reason) => `• ${reason}`).join('\n')}\n\nPer-field review:\n${fieldSummary || 'No form answers to review.'}\n\nDo not use these indicators alone to judge or reject an applicant.`).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     if (parts[1] === 'priority') {
