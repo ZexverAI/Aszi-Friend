@@ -38,6 +38,7 @@ export default async function handleInteraction(interaction, context) {
       const ids = [...(config.staffRoleIds ?? []), ...(config.rolesMentionedOnOpen ?? []), ...(config.modChatRoleIds ?? [])];
       if (ids.some((id) => !/^\d{15,22}$/.test(String(id)))) return interaction.reply({ content: 'Role IDs must be Discord snowflake IDs.', ephemeral: true });
       if (config.languages && (!Array.isArray(config.languages) || config.languages.some((lang) => !['en', 'pl', 'de', 'es', 'fr'].includes(lang)))) return interaction.reply({ content: 'Supported languages: en, pl, de, es, fr.', ephemeral: true });
+      if ((config.topics ?? []).length > 25) return interaction.reply({ content: 'A panel can have at most 25 selectable topics.', ephemeral: true });
       if ((config.topics ?? []).some((topic) => !Array.isArray(topic.fields) || topic.fields.length > 5)) return interaction.reply({ content: 'Each topic may have at most five modal fields.', ephemeral: true });
       updatePanelConfig(db, panelId, config);
       await interaction.reply({ content: 'Panel draft configuration saved.', ephemeral: true });
