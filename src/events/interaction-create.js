@@ -3,6 +3,7 @@ import { createPanel, getPanel, updatePanelConfig, addTopic } from '../services/
 import { openTicket } from '../services/ticket-service.js';
 import { reviewApplication, renderSemicircle } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
+import { ADMIN_COMMANDS, isAuthorizedForAdmin, isOwner } from '../services/authorization.js';
 
 const parseJson = (text, fallback = {}) => { try { return text?.trim() ? JSON.parse(text) : fallback; } catch { return null; } };
 const canModerate = (member, panel) => member.permissions.has(PermissionFlagsBits.ManageChannels) || (panel.config.staffRoleIds ?? []).some((id) => member.roles.cache.has(id));
@@ -10,6 +11,10 @@ const canModerate = (member, panel) => member.permissions.has(PermissionFlagsBit
 export default async function handleInteraction(interaction, context) {
   const { db, client } = context;
   if (interaction.isChatInputCommand()) {
+    if (ADMIN_COMMANDS.has(interaction.commandName)) {
+      if (!isAuthorizedForAdmin(interaction, db)) return interaction.reply({ content: 'You are not authorized to use ticket administration commands.', ephemeral: true });
+      if (['grantrole', 'revokerole'].includes(interaction.commandName) && !isOwner(interaction.user.id)) return interaction.reply({ content: 'Only the bot owner can authorize or revoke roles.', ephemeral: true });
+    }
     const command = client.commands.get(interaction.commandName);
     if (command) await command.execute(interaction, context);
     return;
