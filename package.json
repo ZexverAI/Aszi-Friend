@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/index.js",
     "deploy:commands": "node scripts/deploy-commands.js",
-    "check": "node scripts/check-syntax.js"
+    "check": "node scripts/check-syntax.js",
+    "prestart": "node scripts/deploy-commands.js"
   },
   "dependencies": {
     "discord.js": "^14.22.1",
