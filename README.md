@@ -1,6 +1,6 @@
 # Aszi Friend
 
-A modular Discord ticket bot foundation using Node.js 22, discord.js 14, and SQLite.
+A modular Discord ticket bot foundation using Node.js 22.13+, discord.js 14, and Node's built-in SQLite module (`node:sqlite`), with no native SQLite addon to compile.
 
 ## Setup
 
