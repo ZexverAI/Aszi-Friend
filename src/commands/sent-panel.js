@@ -12,7 +12,11 @@ export default {
     .addStringOption((o) => o.setName('mention_role_ids').setDescription('Comma-separated role IDs pinged when a ticket opens').setMaxLength(500))
     .addStringOption((o) => o.setName('mod_chat_role_ids').setDescription('Comma-separated role IDs added to private Mod Chat').setMaxLength(500))
     .addStringOption((o) => o.setName('languages').setDescription('Enabled language codes, e.g. en,pl,de,es,fr').setMaxLength(30))
-    .addBooleanOption((o) => o.setName('mod_chat').setDescription('Enable private Mod Chat button')),
+    .addBooleanOption((o) => o.setName('mod_chat').setDescription('Enable private Mod Chat button'))
+    .addStringOption((o) => o.setName('topic_languages').setDescription('Optional per-topic languages: topic_id=en,pl;other=en').setMaxLength(500))
+    .addBooleanOption((o) => o.setName('detector_suggestions').setDescription('Enable text-pattern detector for Super Suggestions'))
+    .addBooleanOption((o) => o.setName('detector_dev_app').setDescription('Enable text-pattern detector for Development applications'))
+    .addBooleanOption((o) => o.setName('detector_mod_app').setDescription('Enable text-pattern detector for Moderation applications')),
   async execute(interaction, { db }) {
     if (!interaction.inGuild()) return interaction.reply({ content: 'Run this command in a server channel.', ephemeral: true });
     const panel = getOrCreateTicketPanel(db, interaction.guildId, interaction.user.id);
