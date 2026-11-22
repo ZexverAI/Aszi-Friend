@@ -26,6 +26,7 @@ export function addTopic(db, id, topic) {
   const panel = getPanel(db, id);
   if (!panel) throw new Error('Panel not found.');
   panel.config.topics ??= [];
+  if (panel.config.topics.length >= 25) throw new Error('Discord panels support at most 25 selectable topics.');
   panel.config.topics.push({ id: randomUUID().slice(0, 8), enabled: true, aiDetector: true, modChat: true, fields: [], languages: null, ...topic });
   return updatePanelConfig(db, id, panel.config);
 }
