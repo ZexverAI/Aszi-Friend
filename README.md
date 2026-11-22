@@ -1,37 +1,65 @@
 # Aszi Friend
 
-A modular Discord ticket bot foundation using Node.js 22.13+, discord.js 14, and Node's built-in SQLite module (`node:sqlite`), with no native SQLite addon to compile.
+A Discord ticket bot built with Node.js 22, discord.js 14, and Node's built-in SQLite module. SQLite uses no native addon, which works with FadeHost's Node 22 runtime.
 
-## Setup
+## Start
 
-1. Install Node.js 22 and run `npm install`.
-2. Copy `.env.example` to `.env`; set `DISCORD_TOKEN`. Optionally set `DISCORD_GUILD_ID` for fast development registration.
-3. In the Discord Developer Portal, enable the Server Members intent if you use private moderator chat.
-4. Run `npm start`. When the bot connects, it synchronizes its slash commands separately for every server it has joined.
+1. Set `DISCORD_TOKEN` in FadeHost's environment settings.
+2. Start with `npm start`.
+3. Invite the bot with the `bot` and `applications.commands` scopes. It needs permissions to view channels, send messages, create channels, manage channel permissions, and manage private threads.
+4. Use `/sentpanel` in the channel where the panel should appear.
 
-Do not commit `.env` or bot tokens. The bot needs permission to create private text channels and threads.
+The bot synchronizes guild slash commands when it starts. `DISCORD_TOKEN` is the only required environment variable. Never commit a token or `.env` file.
 
-## Panel workflow
+## Ticket panel
 
-- `/setuppanel` creates a private panel draft only; it does not post a message or create a channel.
-- `/addtopic panel_id:<id>` adds a topic with up to five form fields. Example field JSON: `[{"label":"Describe the issue","required":true,"minLength":20,"maxLength":1000,"style":"paragraph"}]`.
-- `/configurepanel panel_id:<id>` edits advanced JSON. Example: `{"languages":["en","pl"],"rolesMentionedOnOpen":["ROLE_ID"],"staffRoleIds":["ROLE_ID"],"modChatRoleIds":["ROLE_ID"],"aiDetector":true,"modChat":true,"defaultLanguage":"en","buttonLabel":"Create a ticket"}`. Topic-level `languages`, `aiDetector`, `modChat`, and `enabled` can override panel settings.
-- `/listpanels` lists draft IDs. `/publishpanel` posts a panel only when an administrator explicitly invokes it and selects a channel. No panel has been published automatically.
+`/sentpanel` posts a panel message with the FAQ and rules reminder and a **🎫 Create Ticket** button. The FAQ link is `<#1574181136026964180>`. No panel is posted until an authorized person invokes the command.
 
-Supported interface languages are English (default), Polish, German, Spanish, and French. Topics can limit their available languages. Each ticket is a separate text channel without a category. Opening a ticket pings only configured roles. The five priority levels are Turtle, Low, Standard (gray circle), High, and World-collapsing.
+On button click, the user chooses one of these topics, a supported language, and a priority:
 
-The ticket channel includes close, claim, per-field text-pattern review, private moderator chat, and priority controls. Private moderator chat uses a private thread and adds members matching configured role IDs (maximum 50). Discord modals allow at most five text inputs, so each topic accepts up to five custom fields. A panel supports at most 25 topics.
+- General Support
+- Business Inquiries
+- Appeals
+- Super Suggestions
+- Development Team Application
+- Discord Moderation Team Application
+- Other
 
-## Review limitations
+Each ticket is created as a separate private text channel without a category. The user sees the form configured for the selected topic. Non-application forms ask for “Give us a few details” (1–1,000 characters). Applications ask for a CV/application up to 5,000 characters. Discord limits each modal text box to 4,000 characters, so the application form uses a 4,000-character field plus an optional 1,000-character field.
 
-No external AI detector or AI API is enabled. The built-in review provides a transparent rule-based text-pattern indicator and a separate basic completeness score; it does not establish AI authorship. Scores can be wrong and must not be used as proof or as the sole reason to reject an application. Short text is marked insufficient. The semicircle is a visual indicator, not a probability chart.
+The ticket includes a randomly selected reassurance message (30 variants) explaining that tickets are checked regularly 24/7 and that busy periods may take longer. It also includes Close, Claim, and Change Priority controls. The five priorities are Turtle 🐢, Low 🟢, Standard ⚪, High 🔴, and World-collapsing ☄️. Ask for AI Opinion is shown only on application tickets. Mod Chat can be disabled for the panel.
+
+## Commands
+
+- `/sentpanel` posts the panel in the current channel and can update its settings.
+- `/closetopic topic:<topic>` stops new tickets for that topic.
+- `/opentopic topic:<topic>` allows new tickets for that topic again.
+- `/grantrole role:<role>` gives a role access to ticket administration commands (bot owner only).
+- `/revokerole role:<role>` removes that access (bot owner only).
+
+`/sentpanel` options:
+
+- `title`, `description`: customize the panel message.
+- `staff_role_ids`: comma-separated role IDs allowed to view tickets.
+- `mention_role_ids`: comma-separated role IDs pinged when a ticket opens.
+- `mod_chat_role_ids`: comma-separated role IDs added to the private Mod Chat.
+- `languages`: enabled language codes, such as `en,pl,de,es,fr`.
+- `topic_languages`: optional topic-specific language sets, for example `general_support=en,pl;appeals=en`. Each language must also be enabled in `languages`.
+- `mod_chat`: enable or disable the Mod Chat control.
+- `detector_suggestions`, `detector_dev_app`, `detector_mod_app`: enable/disable the text-pattern detector on the selected topic. These can also be set when rerunning `/sentpanel`.
+
+The panel defaults to English and enables English, Polish, German, Spanish, and French. Language availability can be limited globally or per topic. Topic open/closed state is saved in SQLite and survives restarts. The fixed FAQ reference remains in the default panel text; a custom description can replace the full message.
+
+## Review limits
+
+The detector is a local rule-based writing-pattern indicator. It does not call an external AI service, cannot determine who wrote a text, and does not output an AI probability. It runs only on Super Suggestions and application topics, and can be disabled per topic. Text shorter than 30 words is marked insufficient. The semicircle visual represents the pattern index, not a probability. The application completeness score is also a simple heuristic. Use these results only as review aids, never as proof or the sole basis for a decision.
 
 ## Command access
 
-The only built-in owner is Discord user ID `1191814686644117537`. The owner can use all ticket administration slash commands and is the only person who can run `/grantrole` or `/revokerole`. Use `/grantrole role:<role>` to allow a role to use panel administration commands in the current server; use `/revokerole` to remove that access. Grants are stored in SQLite separately for each server. Ticket staff roles configured on a panel do not automatically receive command administration access.
-
-At bot startup, guild-scoped slash commands are synchronized for every server where the bot is installed, so they are available immediately without a guild ID. `DISCORD_TOKEN` is the only required environment variable. `npm run deploy:commands` remains available for a manual global registration.
+Bot owner: Discord user ID `1191814686644117537`. The owner can use all ticket administration commands and is the only user who can run `/grantrole` and `/revokerole`. Role grants apply only in the current server and are stored in SQLite. Ticket staff roles do not automatically gain command access.
 
 ## Development
 
-Run `npm run check` for syntax checks across all JavaScript files. SQLite data is stored under `data/` by default and is ignored by Git.
+- `npm run check` checks JavaScript syntax.
+- `npm run deploy:commands` manually registers commands globally.
+- Ticket data is stored in `data/` by default and is ignored by Git.
