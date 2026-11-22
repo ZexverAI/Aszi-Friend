@@ -70,7 +70,7 @@ export default async function handleInteraction(interaction, context) {
         if (!topicOpen(panel, interaction.values[0])) return interaction.reply({ content: 'That topic is currently closed.', ephemeral: true });
         state.topicId = interaction.values[0];
       } else if (parts[1] === 'language') {
-        if (!(panel.config.languages ?? ['en']).includes(interaction.values[0])) return interaction.reply({ content: 'That language is disabled.', ephemeral: true });
+        const selectedTopic = topicFor(panel, state.topicId);\n        if (!(panel.config.languages ?? ['en']).includes(interaction.values[0]) || (selectedTopic?.languages && !selectedTopic.languages.includes(interaction.values[0]))) return interaction.reply({ content: 'That language is disabled for this topic.', ephemeral: true });
         state.language = interaction.values[0];
       } else if (parts[1] === 'priority') state.priority = Number(interaction.values[0]);
       client.wizards.set(interaction.user.id, state);
@@ -107,7 +107,7 @@ export default async function handleInteraction(interaction, context) {
     }
     if (parts[1] === 'ai') {
       if (!canModerate(interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
-      if (!topic?.application || panel.config.aiDetector === false || topic.aiDetector === false) return interaction.reply({ content: 'AI opinion is available only for applications where the text-pattern review is enabled.', ephemeral: true });
+      if (!topic?.application) return interaction.reply({ content: 'AI opinion is available only for applications.', ephemeral: true });
       const result = reviewApplication(JSON.parse(ticket.submission_json || '{}'));
       const detail = result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\n');
       const pattern = result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum).' : `Text pattern indicator: ${result.patternScore}/100. This is not an AI probability or proof of authorship.\n\n${renderSemicircle(result.patternScore)}`;
