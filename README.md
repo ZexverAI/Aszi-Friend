@@ -7,7 +7,7 @@ A modular Discord ticket bot foundation using Node.js 22.13+, discord.js 14, and
 1. Install Node.js 22 and run `npm install`.
 2. Copy `.env.example` to `.env`; set `DISCORD_TOKEN`. Optionally set `DISCORD_GUILD_ID` for fast development registration.
 3. In the Discord Developer Portal, enable the Server Members intent if you use private moderator chat.
-4. Run `npm run deploy:commands` and then `npm start`.
+4. Run `npm start`. The prestart step registers the slash commands before the bot connects.
 
 Do not commit `.env` or bot tokens. The bot needs permission to create private text channels and threads.
 
@@ -30,7 +30,7 @@ No external AI detector or AI API is enabled. The built-in review provides a tra
 
 The only built-in owner is Discord user ID `1191814686644117537`. The owner can use all ticket administration slash commands and is the only person who can run `/grantrole` or `/revokerole`. Use `/grantrole role:<role>` to allow a role to use panel administration commands in the current server; use `/revokerole` to remove that access. Grants are stored in SQLite separately for each server. Ticket staff roles configured on a panel do not automatically receive command administration access.
 
-After updating, run `npm run deploy:commands` so Discord registers `/grantrole`, `/revokerole`, and the updated command access settings. `DISCORD_TOKEN` is the only required environment variable.
+At every `npm start`, the prestart step synchronizes the slash commands with Discord. You can also run `npm run deploy:commands` manually. `DISCORD_TOKEN` is the only required environment variable; optionally set `DISCORD_GUILD_ID` to register commands to one server immediately while testing.
 
 ## Development
 
