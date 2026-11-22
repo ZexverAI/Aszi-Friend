@@ -25,7 +25,7 @@ export default {
       const value = interaction.options.getString(name);
       if (value === null) return;
       const ids = roleIds(value);
-      if (ids.some((id) => !/^\\d{15,22}$/.test(id) || !interaction.guild.roles.cache.has(id))) throw new Error(`Invalid role ID in ${name}.`);
+      if (ids.some((id) => !/^\d{15,22}$/.test(id) || !interaction.guild.roles.cache.has(id))) throw new Error(`Invalid role ID in ${name}.`);
       config[key] = [...new Set(ids)];
     };
     try {
