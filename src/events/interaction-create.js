@@ -70,7 +70,8 @@ export default async function handleInteraction(interaction, context) {
         if (!topicOpen(panel, interaction.values[0])) return interaction.reply({ content: 'That topic is currently closed.', ephemeral: true });
         state.topicId = interaction.values[0];
       } else if (parts[1] === 'language') {
-        const selectedTopic = topicFor(panel, state.topicId);\n        if (!(panel.config.languages ?? ['en']).includes(interaction.values[0]) || (selectedTopic?.languages && !selectedTopic.languages.includes(interaction.values[0]))) return interaction.reply({ content: 'That language is disabled for this topic.', ephemeral: true });
+        const selectedTopic = topicFor(panel, state.topicId);
+        if (!(panel.config.languages ?? ['en']).includes(interaction.values[0]) || (selectedTopic?.languages && !selectedTopic.languages.includes(interaction.values[0]))) return interaction.reply({ content: 'That language is disabled for this topic.', ephemeral: true });
         state.language = interaction.values[0];
       } else if (parts[1] === 'priority') state.priority = Number(interaction.values[0]);
       client.wizards.set(interaction.user.id, state);
