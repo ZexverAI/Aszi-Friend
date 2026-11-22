@@ -154,8 +154,19 @@ export default async function handleInteraction(interaction, context) {
   if (interaction.isStringSelectMenu() && parts[0] === 'ticketpriority') {
     const ticket = db.prepare('SELECT * FROM tickets WHERE id=?').get(parts[1]);
     if (!ticket) return interaction.reply({ content: 'Ticket not found.', ephemeral: true });
+    if (ticket.guild_id !== interaction.guildId) return interaction.reply({ content: 'Ticket not found in this server.', ephemeral: true });
     const priority = Number(interaction.values[0]);
     db.prepare('UPDATE tickets SET priority=? WHERE id=?').run(priority, ticket.id);
-    return interaction.update({ content: `Priority updated: ${['Turtle 🐢','Low 🟢','Standard ⚪','High 🔴','World-collapsing ☄️'][priority - 1]}`, components: [] });
+    const label = ['Turtle 🐢','Low 🟢','Standard ⚪','High 🔴','World-collapsing ☄️'][priority - 1];
+    const channel = await interaction.guild.channels.fetch(ticket.channel_id).catch(() => null);
+    if (channel?.isTextBased()) {
+      const messages = await channel.messages.fetch({ limit: 25 }).catch(() => null);
+      const ticketMessage = messages?.find((message) => message.components.some((row) => row.components.some((component) => component.customId === `ticket:priority:${ticket.id}`)));
+      if (ticketMessage) {
+        const content = ticketMessage.content.replace(/^\\*\\*Priority:\\*\\*.*(?:\\r?\\n)?/m, '').trim();
+        await ticketMessage.edit({ content: [content, `**Priority:** ${label}`].filter(Boolean).join('\\n') });
+      }
+    }
+    return interaction.update({ content: `Priority updated: ${label}`, components: [] });
   }
 }
