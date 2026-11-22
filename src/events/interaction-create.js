@@ -27,7 +27,7 @@ export default async function handleInteraction(interaction, context) {
     const [, , panelId, topicId, language, priorityText] = interaction.customId.split(':');
     const panel = getPanel(db, panelId);
     const topic = topicFor(panel, topicId);
-    if (!panel || panel.guild_id !== interaction.guildId || !topic || topic.enabled === false) return interaction.reply({ content: 'This ticket topic is currently unavailable.', ephemeral: true });
+    if (!panel || panel.guild_id !== interaction.guildId || !topic || topic.enabled === false || !(panel.config.languages ?? ['en']).includes(language) || (topic.languages && !topic.languages.includes(language))) return interaction.reply({ content: 'This ticket topic or language is currently unavailable.', ephemeral: true });
     const answers = {};
     if (topic.application) {
       const first = interaction.fields.getTextInputValue('field_0').trim();
@@ -69,6 +69,8 @@ export default async function handleInteraction(interaction, context) {
       if (parts[1] === 'topic') {
         if (!topicOpen(panel, interaction.values[0])) return interaction.reply({ content: 'That topic is currently closed.', ephemeral: true });
         state.topicId = interaction.values[0];
+        const selected = topicFor(panel, state.topicId);
+        if (selected.languages && !selected.languages.includes(state.language)) state.language = selected.languages[0];
       } else if (parts[1] === 'language') {
         const selectedTopic = topicFor(panel, state.topicId);
         if (!(panel.config.languages ?? ['en']).includes(interaction.values[0]) || (selectedTopic?.languages && !selectedTopic.languages.includes(interaction.values[0]))) return interaction.reply({ content: 'That language is disabled for this topic.', ephemeral: true });
