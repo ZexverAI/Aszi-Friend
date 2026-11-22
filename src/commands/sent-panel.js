@@ -1,0 +1,52 @@
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { getOrCreateTicketPanel, updatePanelConfig } from '../services/panel-service.js';
+
+const roleIds = (input) => (input ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+export default {
+  data: new SlashCommandBuilder()
+    .setName('sentpanel')
+    .setDescription('Post the ticket panel in this channel.')
+    .addStringOption((o) => o.setName('title').setDescription('Panel title').setMaxLength(100))
+    .addStringOption((o) => o.setName('description').setDescription('Panel description').setMaxLength(1500))
+    .addStringOption((o) => o.setName('staff_role_ids').setDescription('Comma-separated role IDs allowed to see tickets').setMaxLength(500))
+    .addStringOption((o) => o.setName('mention_role_ids').setDescription('Comma-separated role IDs pinged when a ticket opens').setMaxLength(500))
+    .addStringOption((o) => o.setName('mod_chat_role_ids').setDescription('Comma-separated role IDs added to private Mod Chat').setMaxLength(500))
+    .addStringOption((o) => o.setName('languages').setDescription('Enabled language codes, e.g. en,pl,de,es,fr').setMaxLength(30))
+    .addBooleanOption((o) => o.setName('mod_chat').setDescription('Enable private Mod Chat button')),
+  async execute(interaction, { db }) {
+    if (!interaction.inGuild()) return interaction.reply({ content: 'Run this command in a server channel.', ephemeral: true });
+    const panel = getOrCreateTicketPanel(db, interaction.guildId, interaction.user.id);
+    const config = panel.config;
+    const parseRoles = (name, key) => {
+      const value = interaction.options.getString(name);
+      if (value === null) return;
+      const ids = roleIds(value);
+      if (ids.some((id) => !/^\\d{15,22}$/.test(id) || !interaction.guild.roles.cache.has(id))) throw new Error(`Invalid role ID in ${name}.`);
+      config[key] = [...new Set(ids)];
+    };
+    try {
+      parseRoles('staff_role_ids', 'staffRoleIds');
+      parseRoles('mention_role_ids', 'rolesMentionedOnOpen');
+      parseRoles('mod_chat_role_ids', 'modChatRoleIds');
+      const langs = interaction.options.getString('languages');
+      if (langs !== null) {
+        const parsed = [...new Set(langs.split(',').map((v) => v.trim().toLowerCase()).filter(Boolean))];
+        if (!parsed.length || parsed.some((lang) => !['en','pl','de','es','fr'].includes(lang))) throw new Error('Languages must be selected from en, pl, de, es, fr.');
+        config.languages = parsed;
+        if (!parsed.includes(config.defaultLanguage)) config.defaultLanguage = parsed[0];
+      }
+    } catch (error) {
+      return interaction.reply({ content: error.message, ephemeral: true });
+    }
+    const modChat = interaction.options.getBoolean('mod_chat');
+    if (modChat !== null) config.modChat = modChat;
+    updatePanelConfig(db, panel.id, config);
+
+    const title = interaction.options.getString('title') || 'Aszi Friend Support';
+    const description = interaction.options.getString('description') || 'Before creating a ticket, please read the FAQ and familiarize yourself with the server rules.\n\nFAQ: <#1574181136026964180>\n\nChoose the topic that best matches your request after clicking below.';
+    const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(0x5865f2);
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`panel:create:${panel.id}`).setLabel('Create Ticket').setEmoji('🎫').setStyle(ButtonStyle.Primary));
+    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.reply({ content: 'Ticket panel posted in this channel.', ephemeral: true });
+  },
+};
