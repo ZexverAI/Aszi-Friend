@@ -48,7 +48,7 @@ The ticket includes a randomly selected reassurance message (30 variants) explai
 - `mod_chat`: enable or disable the Mod Chat control.
 - `detector_suggestions`, `detector_dev_app`, `detector_mod_app`: enable/disable the text-pattern detector on the selected topic. These can also be set when rerunning `/sentpanel`.
 
-The panel defaults to English and enables English, Polish, German, Spanish, and French. Language availability can be limited globally or per topic. Topic open/closed state is saved in SQLite and survives restarts. The fixed FAQ reference remains in the default panel text; a custom description can replace the full message.
+The panel defaults to English and enables English, Polish, German, Spanish, and French. Language availability can be limited globally or per topic. Topic open/closed state is saved in SQLite and survives restarts. The FAQ and rules reminder remains in the panel even when you customize its title or description.
 
 ## Review limits
 
