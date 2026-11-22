@@ -163,7 +163,7 @@ export default async function handleInteraction(interaction, context) {
       const messages = await channel.messages.fetch({ limit: 25 }).catch(() => null);
       const ticketMessage = messages?.find((message) => message.components.some((row) => row.components.some((component) => component.customId === `ticket:priority:${ticket.id}`)));
       if (ticketMessage) {
-        const content = ticketMessage.content.replace(/^\\*\\*Priority:\\*\\*.*(?:\\r?\\n)?/m, '').trim();
+        const content = ticketMessage.content.replace(/^\*\*Priority:\*\*.*(?:\r?\n)?/m, '').trim();
         await ticketMessage.edit({ content: [content, `**Priority:** ${label}`].filter(Boolean).join('\\n') });
       }
     }
