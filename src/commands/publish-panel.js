@@ -1,10 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { getPanel } from '../services/panel-service.js';
 export default {
   data: new SlashCommandBuilder().setName('publishpanel').setDescription('Post a configured ticket panel in a channel when you choose.')
     .addStringOption((option) => option.setName('panel_id').setDescription('Panel ID from /listpanels').setRequired(true))
     .addChannelOption((option) => option.setName('channel').setDescription('Channel to publish in').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    ,
   async execute(interaction, { db }) {
     const panel = getPanel(db, interaction.options.getString('panel_id', true));
     if (!panel || panel.guild_id !== interaction.guildId) return interaction.reply({ content: 'Panel not found in this server.', ephemeral: true });
