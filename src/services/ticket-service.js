@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { ChannelType, PermissionFlagsBits } from 'discord.js';
+import { ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { t } from '../lib/locales.js';
+import { reviewApplication, renderSemicircle } from '../lib/ai-review.js';
 
 const REASSURANCE = [
   'Our moderation team is doing its best to help you. Tickets are checked regularly, around the clock; during busy periods, replies may take longer.',
@@ -34,7 +35,7 @@ const REASSURANCE = [
   'Our moderation team is reviewing the queue regularly, 24/7. If traffic is high, please allow us extra time.',
   'Thanks for reaching out to us. We check tickets regularly around the clock, and we appreciate your patience during busy periods.',
 ];
-
+const PRIORITIES = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'];
 export async function openTicket({ db, interaction, panel, topic, answers, language, priority }) {
   const guild = interaction.guild;
   const staffRoleIds = panel.config.staffRoleIds ?? [];
@@ -42,7 +43,7 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
     { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageThreads] },
-    ...staffRoleIds.map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] })),
+    ...staffRoleIds.filter((id) => guild.roles.cache.has(id)).map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] })),
   ];
   const channel = await guild.channels.create({
     name: `ticket-${interaction.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 90),
@@ -54,28 +55,34 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   db.prepare('INSERT INTO tickets (id, panel_id, guild_id, channel_id, opener_id, topic_id, language, priority, submission_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .run(ticketId, panel.id, guild.id, channel.id, interaction.user.id, topic.id, language, priority, JSON.stringify(answers));
 
-  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
   const answerFields = Object.entries(answers).flatMap(([label, value]) => {
     const text = String(value ?? '');
-    const chunks = text.match(/[\s\S]{1,1000}/g) ?? ['—'];
+    const chunks = text.match(/[\\s\\S]{1,1000}/g) ?? ['—'];
     return chunks.map((chunk, index) => ({ name: `${label.slice(0, 200)}${chunks.length > 1 ? ` (part ${index + 1})` : ''}`.slice(0, 256), value: chunk || '—' }));
   });
-  for (let i = 0; i < answerFields.length; i += 5) {
-    const embed = new EmbedBuilder().setTitle(topic.name.slice(0, 256)).addFields(answerFields.slice(i, i + 5)).setColor(0x5865f2);
-    await channel.send({ embeds: [embed] });
+  const initialEmbed = new EmbedBuilder().setTitle(topic.name.slice(0, 256)).addFields(answerFields.slice(0, 5)).setColor(0x5865f2);
+  await channel.send({ embeds: [initialEmbed] });
+  for (let i = 5; i < answerFields.length; i += 5) await channel.send({ embeds: [new EmbedBuilder().setTitle(`${topic.name} (continued)`.slice(0, 256)).addFields(answerFields.slice(i, i + 5)).setColor(0x5865f2)] });
+
+  if (topic.aiDetector && panel.config.aiDetector !== false) {
+    const report = reviewApplication(answers);
+    const detectorDescription = report.patternScore == null
+      ? 'Text pattern detector: insufficient text for a useful check (30-word minimum).'
+      : `Text pattern indicator: ${report.patternScore}/100. This is not an AI probability or proof of authorship.\\n\\n${renderSemicircle(report.patternScore)}`;
+    await channel.send({ embeds: [new EmbedBuilder().setTitle('Text pattern review (heuristic)').setDescription(`${detectorDescription}\\n\\n${report.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `${field.score}/100`}`).join('\\n')}\\n\\nUse this only as a prompt for human review.`).setColor(0xf1c40f)] });
   }
-  const row = new ActionRowBuilder().addComponents(
+
+  const buttons = [
     new ButtonBuilder().setCustomId(`ticket:close:${ticketId}`).setLabel(t(language, 'close')).setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId(`ticket:claim:${ticketId}`).setLabel(t(language, 'claim')).setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`ticket:ai:${ticketId}`).setLabel(t(language, 'aiOpinion')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`ticket:modchat:${ticketId}`).setLabel(t(language, 'modChat')).setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary),
-  );
+  ];
+  if (topic.application) buttons.push(new ButtonBuilder().setCustomId(`ticket:ai:${ticketId}`).setLabel(t(language, 'aiOpinion')).setStyle(ButtonStyle.Secondary));
+  if (panel.config.modChat !== false && topic.modChat !== false) buttons.push(new ButtonBuilder().setCustomId(`ticket:modchat:${ticketId}`).setLabel(t(language, 'modChat')).setStyle(ButtonStyle.Secondary));
+  buttons.push(new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary));
+  const row = new ActionRowBuilder().addComponents(...buttons);
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
-  const priorityLabel = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1];
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${priorityLabel}`].filter(Boolean).join('\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${PRIORITIES[priority - 1]}`].filter(Boolean).join('\\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
-
 export { REASSURANCE };
