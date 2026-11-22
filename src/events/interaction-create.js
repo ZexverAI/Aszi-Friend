@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits, ThreadAutoArchiveDuration } from 'discord.js';
 import { createPanel, getPanel, updatePanelConfig, addTopic } from '../services/panel-service.js';
 import { openTicket } from '../services/ticket-service.js';
-import { analyzeText, renderSemicircle } from '../lib/ai-review.js';
+import { reviewApplication, renderSemicircle } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
 
 const parseJson = (text, fallback = {}) => { try { return text?.trim() ? JSON.parse(text) : fallback; } catch { return null; } };
@@ -128,9 +128,11 @@ export default async function handleInteraction(interaction, context) {
     if (parts[1] === 'ai') {
       if (!canModerate(interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
       if (panel.config.aiDetector === false || panel.config.topics.find((item) => item.id === ticket.topic_id)?.aiDetector === false) return interaction.reply({ content: 'Text pattern review is disabled for this topic.', ephemeral: true });
-      const submission = interaction.channel.messages.cache.filter((message) => message.author.id === ticket.opener_id).map((message) => message.content).join('\n');
-      const result = analyzeText(submission);
-      const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness and quality review is not an AI.\n\n${renderSemicircle(result.score)}\n\n${t(ticket.language, 'heuristic', { score: result.score ?? 'N/A' })}\n\n${result.reasons.map((reason) => `• ${reason}`).join('\n')}\n\nDo not use this score alone to judge or reject an applicant.`).setColor(0x5865f2);
+      const answers = JSON.parse(ticket.submission_json || '{}');
+      const result = reviewApplication(answers);
+      const fieldSummary = result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\\n');
+      const patternText = result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum per field).' : `Text pattern indicator: ${result.patternScore}/100. This is not an AI probability or proof of authorship.\\n\\n${renderSemicircle(result.patternScore)}`;
+      const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness score: ${result.applicationScore}/100 (a basic completeness heuristic, not an AI assessment).\\n\\n${patternText}\\n\\n${result.reasons.map((reason) => `• ${reason}`).join('\\n')}\\n\\nPer-field review:\\n${fieldSummary || 'No form answers to review.'}\\n\\nDo not use these indicators alone to judge or reject an applicant.`).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
     if (parts[1] === 'priority') {
