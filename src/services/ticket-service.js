@@ -58,7 +58,7 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
   const answerFields = Object.entries(answers).flatMap(([label, value]) => {
     const text = String(value ?? '');
-    const chunks = text.match(/[\\s\\S]{1,1000}/g) ?? ['—'];
+    const chunks = text.match(/[\s\S]{1,1000}/g) ?? ['—'];
     return chunks.map((chunk, index) => ({ name: `${label.slice(0, 200)}${chunks.length > 1 ? ` (part ${index + 1})` : ''}`.slice(0, 256), value: chunk || '—' }));
   });
   const initialEmbed = new EmbedBuilder().setTitle(topic.name.slice(0, 256)).addFields(answerFields.slice(0, 5)).setColor(0x5865f2);
@@ -69,8 +69,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     const report = reviewApplication(answers);
     const detectorDescription = report.patternScore == null
       ? 'Text pattern detector: insufficient text for a useful check (30-word minimum).'
-      : `Text pattern indicator: ${report.patternScore}/100. This is not an AI probability or proof of authorship.\\n\\n${renderSemicircle(report.patternScore)}`;
-    await channel.send({ embeds: [new EmbedBuilder().setTitle('Text pattern review (heuristic)').setDescription(`${detectorDescription}\\n\\n${report.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `${field.score}/100`}`).join('\\n')}\\n\\nUse this only as a prompt for human review.`).setColor(0xf1c40f)] });
+      : `Text pattern indicator: ${report.patternScore}/100. This is not an AI probability or proof of authorship.\n\n${renderSemicircle(report.patternScore)}`;
+    await channel.send({ embeds: [new EmbedBuilder().setTitle('Text pattern review (heuristic)').setDescription(`${detectorDescription}\n\n${report.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `${field.score}/100`}`).join('\n')}\n\nUse this only as a prompt for human review.`).setColor(0xf1c40f)] });
   }
 
   const buttons = [
@@ -82,7 +82,7 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   buttons.push(new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary));
   const row = new ActionRowBuilder().addComponents(...buttons);
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${PRIORITIES[priority - 1]}`].filter(Boolean).join('\\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${PRIORITIES[priority - 1]}`].filter(Boolean).join('\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
 export { REASSURANCE };
