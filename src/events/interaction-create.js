@@ -33,8 +33,9 @@ export default async function handleInteraction(interaction, context) {
     if (topic.application) {
       const first = interaction.fields.getTextInputValue('field_0').trim();
       const second = interaction.fields.getTextInputValue('field_1')?.trim() ?? '';
-      if (!first || first.length + second.length > 5000) return interaction.reply({ content: 'Your CV/application must contain between 1 and 5,000 characters.', ephemeral: true });
-      answers['CV / application'] = [first, second].filter(Boolean).join('\n');
+      const cv = [first, second].filter(Boolean).join('\n');
+      if (!first || cv.length > 5000) return interaction.reply({ content: 'Your CV/application must contain between 1 and 5,000 characters.', ephemeral: true });
+      answers['CV / application'] = cv;
     } else {
       const details = interaction.fields.getTextInputValue('field_0').trim();
       if (!details || details.length > 1000) return interaction.reply({ content: 'Please provide 1–1,000 characters in “Give us a few details”.', ephemeral: true });
