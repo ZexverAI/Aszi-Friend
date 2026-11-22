@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { ChannelType, PermissionFlagsBits } from 'discord.js';\nimport { t } from '../lib/locales.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';
+import { t } from '../lib/locales.js';
 
 const REASSURANCE = [
   'Our moderation team is doing its best to help you. Tickets are checked regularly, around the clock; during busy periods, replies may take longer.',
@@ -55,7 +56,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
 
   const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
-  const details = Object.entries(answers).map(([label, value]) => `**${label}:** ${String(value).slice(0, 1000)}`).join('\n');
+  const details = Object.entries(answers).map(([label, value]) => `**${label}:** ${String(value).slice(0, 1000)}`).join('
+');
   const embed = new EmbedBuilder().setTitle(topic.name).setDescription(details || 'No additional details provided.').setColor(0x5865f2);
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`ticket:close:${ticketId}`).setLabel(t(language, 'close')).setStyle(ButtonStyle.Danger),
@@ -65,7 +67,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary),
   );
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1]}`].filter(Boolean).join('\n'), embeds: [embed], components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1]}`].filter(Boolean).join('
+'), embeds: [embed], components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
 
