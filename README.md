@@ -34,6 +34,8 @@ The ticket includes a randomly selected reassurance message (30 variants) explai
 - `/sentpanel` posts the panel in the current channel and can update its settings.
 - `/closetopic topic:<topic>` stops new tickets for that topic.
 - `/opentopic topic:<topic>` allows new tickets for that topic again.
+- `/addlanguage language:<language>` enables English, Polish, German, Spanish, or French for ticket forms without posting another panel.
+- `/removelanguage language:<language>` disables a language without posting another panel. At least one language must remain enabled.
 - `/grantrole role:<role>` gives a role access to ticket administration commands (bot owner only).
 - `/revokerole role:<role>` removes that access (bot owner only).
 
