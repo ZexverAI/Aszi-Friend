@@ -58,7 +58,7 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
   const answerFields = Object.entries(answers).flatMap(([label, value]) => {
     const text = String(value ?? '');
-    const chunks = text.match(/[\\s\\S]{1,1000}/g) ?? ['—'];
+    const chunks = text.match(/[\s\S]{1,1000}/g) ?? ['—'];
     return chunks.map((chunk, index) => ({ name: `${label.slice(0, 200)}${chunks.length > 1 ? ` (part ${index + 1})` : ''}`.slice(0, 256), value: chunk || '—' }));
   });
   for (let i = 0; i < answerFields.length; i += 5) {
@@ -74,7 +74,7 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   );
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
   const priorityLabel = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1];
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${priorityLabel}`].filter(Boolean).join('\\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${priorityLabel}`].filter(Boolean).join('\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
 
