@@ -50,8 +50,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     reason: `Ticket opened by ${interaction.user.tag}`,
   });
   const ticketId = randomUUID();
-  db.prepare('INSERT INTO tickets (id, panel_id, guild_id, channel_id, opener_id, topic_id, language, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(ticketId, panel.id, guild.id, channel.id, interaction.user.id, topic.id, language, priority);
+  db.prepare('INSERT INTO tickets (id, panel_id, guild_id, channel_id, opener_id, topic_id, language, priority, submission_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(ticketId, panel.id, guild.id, channel.id, interaction.user.id, topic.id, language, priority, JSON.stringify(answers));
 
   const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
   const randomMessage = REASSURANCE[Math.floor(Math.random() * REASSURANCE.length)];
