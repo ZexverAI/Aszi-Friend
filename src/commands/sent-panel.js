@@ -44,6 +44,21 @@ export default {
     }
     const modChat = interaction.options.getBoolean('mod_chat');
     if (modChat !== null) config.modChat = modChat;
+    const topicLanguages = interaction.options.getString('topic_languages');
+    if (topicLanguages !== null) {
+      for (const topic of config.topics) topic.languages = null;
+      for (const entry of topicLanguages.split(';').map((part) => part.trim()).filter(Boolean)) {
+        const [topicId, rawLanguages] = entry.split('=');
+        const topic = config.topics.find((item) => item.id === topicId?.trim());
+        const allowed = [...new Set((rawLanguages ?? '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean))];
+        if (!topic || !allowed.length || allowed.some((lang) => !config.languages.includes(lang))) return interaction.reply({ content: 'Topic language format is invalid. Use topic_id=en,pl;other=en, and choose only languages enabled above.', ephemeral: true });
+        topic.languages = allowed;
+      }
+    }
+    for (const [option, topicId] of [['detector_suggestions','super_suggestions'],['detector_dev_app','development_application'],['detector_mod_app','moderation_application']]) {
+      const enabled = interaction.options.getBoolean(option);
+      if (enabled !== null) config.topics.find((topic) => topic.id === topicId).aiDetector = enabled;
+    }
     updatePanelConfig(db, panel.id, config);
 
     const title = interaction.options.getString('title') || 'Aszi Friend Support';
