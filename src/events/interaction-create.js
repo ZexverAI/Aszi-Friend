@@ -114,7 +114,7 @@ export default async function handleInteraction(interaction, context) {
       const result = reviewApplication(JSON.parse(ticket.submission_json || '{}'));
       const detail = result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\n');
       const detectorEnabled = panel.config.aiDetector !== false && topic.aiDetector !== false;
-      const pattern = !detectorEnabled ? 'Text pattern detector is disabled for this topic.' : result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum).' : `Text pattern indicator: ${result.patternScore}/100. This is not an AI probability or proof of authorship.${nl}${nl}${renderSemicircle(result.patternScore)}`;
+      const pattern = !detectorEnabled ? 'Text pattern detector is disabled for this topic.' : result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum).' : 'Text pattern indicator: ' + result.patternScore + '/100. This is not an AI probability or proof of authorship.\n\n' + renderSemicircle(result.patternScore);
       const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness score: ${result.applicationScore}/100 (a basic completeness heuristic).\n\n${pattern}\n\n${result.reasons.map((reason) => `• ${reason}`).join('\n')}\n\nPer-field review:\n${detail || 'No form answers to review.'}\n\nUse this as a prompt for human review, never as proof or the sole basis for a decision.`).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
