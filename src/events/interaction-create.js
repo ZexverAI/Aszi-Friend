@@ -103,7 +103,7 @@ export default async function handleInteraction(interaction, context) {
         return interaction.reply({ content: `Ticket created: ${channel}`, ephemeral: true });
       }
       const modal = new ModalBuilder().setCustomId(`ticket:form:${panel.id}:${topic.id}:${state.language}:${state.priority}`).setTitle((topic.formTitle || 'Ticket details').slice(0, 45));
-      modal.addComponents(...fields.map((field, i) => new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(`field_${i}`).setLabel(field.label.slice(0, 45)).setStyle(field.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph).setMinLength(field.minLength ?? 0).setMaxLength(field.maxLength ?? 1000).setRequired(Boolean(field.required))));
+      modal.addComponents(...fields.map((field, i) => new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(`field_${i}`).setLabel(field.label.slice(0, 45)).setStyle(field.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph).setMinLength(field.minLength ?? 0).setMaxLength(field.maxLength ?? 1000).setRequired(Boolean(field.required)))));
       await interaction.showModal(modal);
     }
     return;
