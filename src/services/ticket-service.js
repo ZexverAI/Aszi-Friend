@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ChannelType, PermissionFlagsBits, ThreadAutoArchiveDuration } from 'discord.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';\nimport { t } from '../lib/locales.js';
 
 const REASSURANCE = [
   'Our moderation team is doing its best to help you. Tickets are checked regularly, around the clock; during busy periods, replies may take longer.',
@@ -58,11 +58,11 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   const details = Object.entries(answers).map(([label, value]) => `**${label}:** ${String(value).slice(0, 1000)}`).join('\n');
   const embed = new EmbedBuilder().setTitle(topic.name).setDescription(details || 'No additional details provided.').setColor(0x5865f2);
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`ticket:close:${ticketId}`).setLabel('Close the Ticket').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(`ticket:claim:${ticketId}`).setLabel('Claim the Ticket').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`ticket:ai:${ticketId}`).setLabel('Ask for AI opinion').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`ticket:modchat:${ticketId}`).setLabel('Mod Chat').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel('Change the Priority').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`ticket:close:${ticketId}`).setLabel(t(language, 'close')).setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`ticket:claim:${ticketId}`).setLabel(t(language, 'claim')).setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`ticket:ai:${ticketId}`).setLabel(t(language, 'aiOpinion')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`ticket:modchat:${ticketId}`).setLabel(t(language, 'modChat')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary),
   );
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
   await channel.send({ content: [mentions, randomMessage, `**Priority:** ${['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'][priority - 1]}`].filter(Boolean).join('\n'), embeds: [embed], components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
