@@ -11,7 +11,6 @@ function normalizeOption(option) {
   if (option.options) normalized.options = option.options.map(normalizeOption);
   return normalized;
 }
-
 function normalizeCommand(command) {
   return {
     name: command.name,
@@ -20,41 +19,43 @@ function normalizeCommand(command) {
     options: (command.options ?? []).map(normalizeOption),
   };
 }
+function sameCommands(actual, payload) {
+  const normalize = (items) => items.map(normalizeCommand).sort((a, b) => a.name.localeCompare(b.name));
+  return JSON.stringify(normalize(actual)) === JSON.stringify(normalize(payload));
+}
 
 export function createCommandSynchronizer(client, token) {
   const rest = new REST({ version: '10' }).setToken(token);
   const payload = [...client.commands.values()].map((command) => command.data.toJSON());
   const inFlight = new Map();
 
+  async function syncGlobal() {
+    const route = Routes.applicationCommands(client.user.id);
+    const current = await rest.get(route);
+    if (!sameCommands(Array.isArray(current) ? current : [], payload)) {
+      const updated = await rest.put(route, { body: payload });
+      console.log(`[commands] Replaced global commands with ${updated.length} current commands.`);
+    } else console.log(`[commands] Verified ${payload.length} global commands.`);
+  }
+
   async function syncGuild(guild) {
     if (inFlight.has(guild.id)) return inFlight.get(guild.id);
     const work = (async () => {
       const route = Routes.applicationGuildCommands(client.user.id, guild.id);
       const current = await rest.get(route);
-      const actual = Array.isArray(current) ? current : [];
-      const desiredSorted = payload.map(normalizeCommand).sort((a, b) => a.name.localeCompare(b.name));
-      const actualSorted = actual.map(normalizeCommand).sort((a, b) => a.name.localeCompare(b.name));
-      if (JSON.stringify(actualSorted) !== JSON.stringify(desiredSorted)) {
+      if (!sameCommands(Array.isArray(current) ? current : [], payload)) {
         const updated = await rest.put(route, { body: payload });
-        console.log(`[commands] Registered ${updated.length} slash commands for ${guild.name} (${guild.id}).`);
-      } else {
-        console.log(`[commands] Verified ${payload.length} slash commands for ${guild.name} (${guild.id}).`);
-      }
+        console.log(`[commands] Registered ${updated.length} commands for ${guild.name} (${guild.id}).`);
+      } else console.log(`[commands] Verified ${payload.length} commands for ${guild.name} (${guild.id}).`);
     })();
     inFlight.set(guild.id, work);
-    try {
-      await work;
-    } catch (error) {
-      inFlight.delete(guild.id);
-      throw error;
-    }
+    try { await work; } catch (error) { inFlight.delete(guild.id); throw error; }
   }
 
   async function syncAllGuilds() {
+    try { await syncGlobal(); } catch (error) { console.error('[commands] Global command sync failed:', error); }
     const results = await Promise.allSettled([...client.guilds.cache.values()].map(syncGuild));
-    for (const result of results) {
-      if (result.status === 'rejected') console.error('[commands] Guild command sync failed:', result.reason);
-    }
+    for (const result of results) if (result.status === 'rejected') console.error('[commands] Guild command sync failed:', result.reason);
   }
 
   return { syncGuild, syncAllGuilds };
