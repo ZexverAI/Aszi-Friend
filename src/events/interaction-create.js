@@ -15,6 +15,7 @@ export default async function handleInteraction(interaction, context) {
   const { db, client } = context;
   if (interaction.isChatInputCommand()) {
     if (ADMIN_COMMANDS.has(interaction.commandName)) {
+      if (!interaction.inGuild()) return interaction.reply({ content: 'Run ticket administration commands in a server.', ephemeral: true });
       if (!isAuthorizedForAdmin(interaction, db)) return interaction.reply({ content: 'You are not authorized to use ticket administration commands.', ephemeral: true });
       if (['grantrole', 'revokerole'].includes(interaction.commandName) && !isOwner(interaction.user.id)) return interaction.reply({ content: 'Only the bot owner can authorize or revoke roles.', ephemeral: true });
     }
