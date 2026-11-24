@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { t } from '../lib/locales.js';
-import { reviewApplication, renderSemicircle } from '../lib/ai-review.js';
+import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
 
 const REASSURANCE = [
   'Our moderation team is doing its best to help you. Tickets are checked regularly, around the clock; during busy periods, replies may take longer.',
@@ -69,8 +69,8 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
     const report = reviewApplication(answers);
     const detectorDescription = report.patternScore == null
       ? 'Text pattern detector: insufficient text for a useful check (30-word minimum).'
-      : `Text pattern indicator: ${report.patternScore}/100. This is not an AI probability or proof of authorship.\n\n${renderSemicircle(report.patternScore)}`;
-    await channel.send({ embeds: [new EmbedBuilder().setTitle('Text pattern review (heuristic)').setDescription(`${detectorDescription}\n\n${report.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `${field.score}/100`}`).join('\n')}\n\nUse this only as a prompt for human review.`).setColor(0xf1c40f)] });
+      : `Text pattern indicator: ${formatScore(report.patternScore, language)}. This is not an AI probability or proof of authorship.\n\n${renderSemicircle(report.patternScore)}`;
+    await channel.send({ embeds: [new EmbedBuilder().setTitle('Text pattern review (heuristic)').setDescription(`${detectorDescription}\n\n${report.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `${formatScore(field.score, language)}`}`).join('\n')}\n\nUse this only as a prompt for human review.`).setColor(0xf1c40f)] });
   }
 
   const buttons = [
