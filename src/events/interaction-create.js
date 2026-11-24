@@ -1,5 +1,5 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits, ThreadAutoArchiveDuration } from 'discord.js';
-import { getPanel, getOrCreateTicketPanel } from '../services/panel-service.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, LabelBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits, ThreadAutoArchiveDuration } from 'discord.js';
+import { getPanel } from '../services/panel-service.js';
 import { openTicket } from '../services/ticket-service.js';
 import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
@@ -25,25 +25,30 @@ export default async function handleInteraction(interaction, context) {
   }
 
   if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket:form:')) {
-    const [, , panelId, topicId, language, priorityText] = interaction.customId.split(':');
+    const panelId = interaction.customId.split(':')[2];
+    const topicId = interaction.fields.getStringSelectValues('form_topic')?.[0];
+    const language = interaction.fields.getStringSelectValues('form_language')?.[0];
+    const priority = Number(interaction.fields.getStringSelectValues('form_priority')?.[0]);
     const panel = getPanel(db, panelId);
     const topic = topicFor(panel, topicId);
-    if (!panel || panel.guild_id !== interaction.guildId || !topic || topic.enabled === false || !(panel.config.languages ?? ['en']).includes(language) || (topic.languages && !topic.languages.includes(language))) return interaction.reply({ content: 'This ticket topic or language is currently unavailable.', ephemeral: true });
+    if (!panel || panel.guild_id !== interaction.guildId || !topic || topic.enabled === false) return interaction.reply({ content: 'This ticket topic is currently unavailable.', ephemeral: true });
+    if (!(panel.config.languages ?? ['en']).includes(language) || (topic.languages && !topic.languages.includes(language))) return interaction.reply({ content: 'That language is disabled for this topic. Please reopen the form and choose an enabled language.', ephemeral: true });
+    if (!Number.isInteger(priority) || priority < 1 || priority > 5) return interaction.reply({ content: 'Choose a valid ticket priority.', ephemeral: true });
+
+    const first = interaction.fields.getTextInputValue('form_details').trim();
+    const continuation = interaction.fields.getTextInputValue('form_continuation').trim();
     const answers = {};
     if (topic.application) {
-      const first = interaction.fields.getTextInputValue('field_0').trim();
-      const second = interaction.fields.getTextInputValue('field_1')?.trim() ?? '';
-      const cv = [first, second].filter(Boolean).join('\n');
+      const cv = [first, continuation].filter(Boolean).join('\n');
       if (!first || cv.length > 5000) return interaction.reply({ content: 'Your CV/application must contain between 1 and 5,000 characters.', ephemeral: true });
       answers['CV / application'] = cv;
     } else {
-      const details = interaction.fields.getTextInputValue('field_0').trim();
-      if (!details || details.length > 1000) return interaction.reply({ content: 'Please provide 1–1,000 characters in “Give us a few details”.', ephemeral: true });
-      answers['Give us a few details'] = details;
+      if (continuation) return interaction.reply({ content: 'The second text field is only for application CVs. Please reopen the form and leave it blank for this topic.', ephemeral: true });
+      if (!first || first.length > 1000) return interaction.reply({ content: 'Please provide 1–1,000 characters in “Give us a few details”.', ephemeral: true });
+      answers['Give us a few details'] = first;
     }
-    const channel = await openTicket({ db, interaction, panel, topic, answers, language, priority: Number(priorityText) || 3 });
-    client.wizards.delete(interaction.user.id);
-    return interaction.reply({ content: `Ticket created: ${channel}`, ephemeral: true });
+    const channel = await openTicket({ db, interaction, panel, topic, answers, language, priority });
+    return interaction.reply({ content: 'Ticket created: ' + channel, ephemeral: true });
   }
 
   if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
@@ -52,45 +57,57 @@ export default async function handleInteraction(interaction, context) {
   if (parts[0] === 'panel' && interaction.isButton() && parts[1] === 'create') {
     const panel = getPanel(db, parts[2]);
     if (!panel || panel.guild_id !== interaction.guildId) return interaction.reply({ content: 'Panel not found.', ephemeral: true });
-    const topics = (panel.config.topics ?? []).filter((topic) => topic.enabled !== false);
+    const topics = (panel.config.topics ?? []).filter((topic) => topic.enabled !== false).slice(0, 25);
     if (!topics.length) return interaction.reply({ content: 'All ticket topics are currently closed.', ephemeral: true });
     const languages = (panel.config.languages ?? ['en']).filter((lang) => LANGUAGES[lang]);
-    const topicMenu = new StringSelectMenuBuilder().setCustomId(`wizard:topic:${panel.id}`).setPlaceholder('Choose a ticket topic').addOptions(topics.slice(0, 25).map((topic) => ({ label: topic.name.slice(0, 100), value: topic.id, description: (topic.description ?? 'Open a ticket for this topic').slice(0, 100) })));
-    const languageMenu = new StringSelectMenuBuilder().setCustomId(`wizard:language:${panel.id}`).setPlaceholder('Choose a language').addOptions((languages.length ? languages : ['en']).map((lang) => ({ label: LANGUAGES[lang], value: lang })));
-    const priorityMenu = new StringSelectMenuBuilder().setCustomId(`wizard:priority:${panel.id}`).setPlaceholder('Choose a priority').addOptions(PRIORITIES.map((label, index) => ({ label, value: String(index + 1) })));
-    const next = new ButtonBuilder().setCustomId(`wizard:next:${panel.id}`).setLabel('Continue').setStyle(ButtonStyle.Primary);
-    client.wizards.set(interaction.user.id, { panelId: panel.id, language: languages.includes(panel.config.defaultLanguage) ? panel.config.defaultLanguage : (languages[0] ?? 'en'), priority: 3 });
-    return interaction.reply({ content: 'Choose a topic, language, and priority before opening your ticket.', components: [new ActionRowBuilder().addComponents(topicMenu), new ActionRowBuilder().addComponents(languageMenu), new ActionRowBuilder().addComponents(priorityMenu), new ActionRowBuilder().addComponents(next)], ephemeral: true });
-  }
+    const activeLanguages = languages.length ? languages : ['en'];
 
-  if (parts[0] === 'wizard') {
-    const state = client.wizards.get(interaction.user.id);
-    const panel = state && getPanel(db, state.panelId);
-    if (!panel || panel.id !== parts[2]) return interaction.reply({ content: 'Start again from the ticket panel.', ephemeral: true });
-    if (interaction.isStringSelectMenu()) {
-      if (parts[1] === 'topic') {
-        if (!topicOpen(panel, interaction.values[0])) return interaction.reply({ content: 'That topic is currently closed.', ephemeral: true });
-        state.topicId = interaction.values[0];
-        const selected = topicFor(panel, state.topicId);
-        if (selected.languages && !selected.languages.includes(state.language)) state.language = selected.languages[0];
-      } else if (parts[1] === 'language') {
-        const selectedTopic = topicFor(panel, state.topicId);
-        if (!(panel.config.languages ?? ['en']).includes(interaction.values[0]) || (selectedTopic?.languages && !selectedTopic.languages.includes(interaction.values[0]))) return interaction.reply({ content: 'That language is disabled for this topic.', ephemeral: true });
-        state.language = interaction.values[0];
-      } else if (parts[1] === 'priority') state.priority = Number(interaction.values[0]);
-      client.wizards.set(interaction.user.id, state);
-      return interaction.deferUpdate();
-    }
-    if (parts[1] === 'next') {
-      const topic = topicFor(panel, state.topicId);
-      if (!topic || topic.enabled === false) return interaction.reply({ content: 'Choose an open topic first.', ephemeral: true });
-      const fields = topic.application
-        ? [{ label: 'CV / application (part 1, up to 4,000)', required: true, minLength: 1, maxLength: 4000 }, { label: 'CV / application (part 2, up to 1,000)', required: false, minLength: 0, maxLength: 1000 }]
-        : [{ label: 'Give us a few details (up to 1,000)', required: true, minLength: 1, maxLength: 1000 }];
-      const modal = new ModalBuilder().setCustomId(`ticket:form:${panel.id}:${topic.id}:${state.language}:${state.priority}`).setTitle(topic.application ? 'Application' : 'Ticket details');
-      modal.addComponents(...fields.map((field, i) => new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(`field_${i}`).setLabel(field.label).setStyle(TextInputStyle.Paragraph).setMinLength(field.minLength).setMaxLength(field.maxLength).setRequired(field.required))));
-      return interaction.showModal(modal);
-    }
+    const topicSelect = new StringSelectMenuBuilder()
+      .setCustomId('form_topic')
+      .setPlaceholder('Choose a ticket topic')
+      .addOptions(topics.map((topic, index) => ({
+        label: topic.name.slice(0, 100),
+        value: topic.id,
+        description: (topic.description ?? 'Open a ticket for this topic').slice(0, 100),
+        default: index === 0,
+      })));
+    const languageSelect = new StringSelectMenuBuilder()
+      .setCustomId('form_language')
+      .setPlaceholder('Choose a language')
+      .addOptions(activeLanguages.map((language) => ({
+        label: LANGUAGES[language],
+        value: language,
+        default: language === panel.config.defaultLanguage,
+      })));
+    const prioritySelect = new StringSelectMenuBuilder()
+      .setCustomId('form_priority')
+      .setPlaceholder('Choose a priority')
+      .addOptions(PRIORITIES.map((label, index) => ({ label, value: String(index + 1), default: index === 2 })));
+
+    const detailsInput = new TextInputBuilder()
+      .setCustomId('form_details')
+      .setStyle(TextInputStyle.Paragraph)
+      .setMinLength(1)
+      .setMaxLength(4000)
+      .setRequired(true);
+    const continuationInput = new TextInputBuilder()
+      .setCustomId('form_continuation')
+      .setStyle(TextInputStyle.Paragraph)
+      .setMinLength(0)
+      .setMaxLength(1000)
+      .setRequired(false);
+
+    const modal = new ModalBuilder()
+      .setCustomId('ticket:form:' + panel.id)
+      .setTitle('Create a Ticket')
+      .addLabelComponents(
+        new LabelBuilder().setLabel('Ticket topic').setStringSelectMenuComponent(topicSelect),
+        new LabelBuilder().setLabel('Language').setDescription('Some topics may have fewer enabled languages.').setStringSelectMenuComponent(languageSelect),
+        new LabelBuilder().setLabel('Priority').setStringSelectMenuComponent(prioritySelect),
+        new LabelBuilder().setLabel('Details or CV / application').setDescription('Other topics: max 1,000 characters. Applications: up to 4,000 characters here.').setTextInputComponent(detailsInput),
+        new LabelBuilder().setLabel('CV continuation (applications only)').setDescription('Leave this blank for all non-application topics. Up to 1,000 characters.').setTextInputComponent(continuationInput),
+      );
+    return interaction.showModal(modal);
   }
 
   if (parts[0] === 'ticket' && interaction.isButton()) {
