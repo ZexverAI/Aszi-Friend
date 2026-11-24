@@ -38,6 +38,19 @@ function wordsIn(text) {
   return text.match(/[\p{L}\p{N}’'-]+/gu) ?? [];
 }
 
+const KNOWN_TYPO_PATTERN = /\b(?:teh|recieve|seperate|definately|occured|accomodate|enviroment|experiance|proffesional|managment|napewno|wogule|ktury|haver)\b/i;
+const REPEATED_WORD_PATTERN = /\b([\p{L}]{2,})\s+\1\b/iu;
+
+export function formatScore(score, language = 'en') {
+  if (score == null || !Number.isFinite(Number(score))) return 'N/A';
+  const locales = { en: 'en-US', pl: 'pl-PL', de: 'de-DE', es: 'es-ES', fr: 'fr-FR' };
+  const formatted = new Intl.NumberFormat(locales[language] ?? 'en-US', {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(Number(score));
+  return formatted + '%';
+}
+
 export function analyzeText(text) {
   const value = String(text ?? '').trim();
   const words = wordsIn(value);
@@ -54,6 +67,9 @@ export function analyzeText(text) {
     .map((line) => line.replace(/^\s*#+\s*/, '').replace(/[*_]/g, '').trim().toLowerCase())
     .filter(Boolean);
   const headingHits = SUPPLIED_CV_REFERENCE.sectionHeadings.filter((heading) => normalizedHeadings.includes(heading));
+  const introPresent = normalizedHeadings.slice(0, 2).some((heading) =>
+    ['professional profile', 'personal profile', 'profile', 'summary', 'about me', 'introduction'].includes(heading),
+  );
 
   const sentences = value.split(/[.!?]+/).map((part) => part.trim()).filter(Boolean);
   const sentenceLengths = sentences.map((sentence) => wordsIn(sentence).length).filter(Boolean);
@@ -67,18 +83,22 @@ export function analyzeText(text) {
   let score = 0;
   score += Math.min(matchedReferenceGroups.length, 4) * 10;
   score += Math.min(commonPhraseHits.length, 4) * 8;
-  if (headingHits.length >= 3) score += 18;
-  else if (headingHits.length === 2) score += 10;
-  else if (headingHits.length === 1) score += 4;
+  score += Math.min(headingHits.length, 5) * 3.6;
   if (matchedReferenceGroups.length >= 2 && headingHits.length >= 3 && !hasConcreteEvidence) score += 16;
   if (variance < 18 && sentences.length >= 6) score += 10;
   if (repeatedStarters >= 2) score += 8;
   if (sentences.length >= 6 && firstPersonCount / sentences.length >= 0.45) score += 6;
-  score = Math.min(100, score);
+  const spellingLooksClean = !KNOWN_TYPO_PATTERN.test(value) && !REPEATED_WORD_PATTERN.test(value);
+  const polishedStyle = headingHits.length >= 3 || matchedReferenceGroups.length >= 2 || (sentences.length >= 6 && variance < 35);
+  const spellingStyleAndIntroPass = spellingLooksClean && polishedStyle && introPresent;
+  if (spellingStyleAndIntroPass) score += 7;
+  score = Math.round(Math.min(100, score) * 10) / 10;
 
   const reasons = [];
   if (matchedReferenceGroups.length) reasons.push(`Matched ${matchedReferenceGroups.length} broad style group(s) from the supplied ${SUPPLIED_CV_REFERENCE.label} reference.`);
   if (headingHits.length >= 2) reasons.push(`Found ${headingHits.length} familiar CV section headings in a highly structured layout.`);
+  if (spellingStyleAndIntroPass) reasons.push('No obvious spelling red flags matched; the polished style and introduction add 7 pattern points.');
+  else if (!spellingLooksClean) reasons.push('A possible spelling or repeated-word issue was found; this simple check may miss errors.');
   if (matchedReferenceGroups.length >= 2 && headingHits.length >= 3 && !hasConcreteEvidence) reasons.push('Several claims are broad and lack quantified evidence, dates, or links.');
   if (commonPhraseHits.length) reasons.push(`Found ${commonPhraseHits.length} generic transition or filler phrase pattern(s).`);
   if (variance < 18 && sentences.length >= 6) reasons.push('Sentence lengths are unusually consistent.');
@@ -94,7 +114,7 @@ export function reviewApplication(fields) {
   const applicationScore = Math.max(1, Math.min(100, Math.round(1 + entries.length * 14 + Math.min(wordCount, 250) * 0.18)));
   const fieldReviews = entries.map(([label, value]) => ({ label, ...analyzeText(value) }));
   const usable = fieldReviews.map((review) => review.score).filter((score) => score != null);
-  const patternScore = usable.length ? Math.round(usable.reduce((sum, score) => sum + score, 0) / usable.length) : null;
+  const patternScore = usable.length ? Math.round((usable.reduce((sum, score) => sum + score, 0) / usable.length) * 10) / 10 : null;
   const reasons = [`${entries.length} form field(s) completed.`, `${wordCount} words submitted.`];
   if (!entries.length) reasons.push('No saved form answers were found.');
   if (wordCount < MIN_WORDS) reasons.push(`Add more detail for a more useful human review; the detector needs at least ${MIN_WORDS} words.`);
