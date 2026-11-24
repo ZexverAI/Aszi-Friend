@@ -85,7 +85,10 @@ export async function openTicket({ db, interaction, panel, topic, answers, langu
   buttons.push(new ButtonBuilder().setCustomId(`ticket:priority:${ticketId}`).setLabel(t(language, 'priorityButton')).setStyle(ButtonStyle.Secondary));
   const row = new ActionRowBuilder().addComponents(...buttons);
   const mentions = (panel.config.rolesMentionedOnOpen ?? []).filter((id) => guild.roles.cache.has(id)).map((id) => `<@&${id}>`).join(' ');
-  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${PRIORITIES[priority - 1]}`].filter(Boolean).join('\n'), components: [row], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
+  const deleteRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`ticket:delete:${ticketId}`).setLabel('Delete Ticket').setStyle(ButtonStyle.Danger),
+  );
+  await channel.send({ content: [mentions, randomMessage, `**Priority:** ${PRIORITIES[priority - 1]}`].filter(Boolean).join('\n'), components: [row, deleteRow], allowedMentions: { roles: panel.config.rolesMentionedOnOpen ?? [] } });
   return channel;
 }
 export { REASSURANCE };

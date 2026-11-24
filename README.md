@@ -27,7 +27,7 @@ On button click, one modal form opens with topic, language, priority, and text f
 
 Each ticket is created as a separate private text channel without a category. The user sees the form configured for the selected topic. Non-application forms ask for “Give us a few details” (1–1,000 characters). Applications ask for a CV/application up to 5,000 characters. Discord limits each modal text box to 4,000 characters, so the application form uses a 4,000-character field plus an optional 1,000-character field.
 
-The ticket includes a randomly selected reassurance message (30 variants) explaining that tickets are checked regularly 24/7 and that busy periods may take longer. It also includes Close, Claim, and Change Priority controls. The five priorities are Turtle 🐢, Low 🟢, Standard ⚪, High 🔴, and World-collapsing ☄️. Ask for AI Opinion is shown only on application tickets. Mod Chat can be disabled for the panel.
+The ticket includes a randomly selected reassurance message (30 variants) explaining that tickets are checked regularly 24/7 and that busy periods may take longer. It also includes Close, Claim, Delete Ticket (bot mod level or higher), and Change Priority controls. The five priorities are Turtle 🐢, Low 🟢, Standard ⚪, High 🔴, and World-collapsing ☄️. Ask for AI Opinion is shown only on application tickets. Mod Chat can be disabled for the panel.
 
 ## Commands
 

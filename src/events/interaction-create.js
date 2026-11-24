@@ -159,6 +159,18 @@ export default async function handleInteraction(interaction, context) {
     if (!ticket) return interaction.reply({ content: 'Ticket record not found.', ephemeral: true });
     const panel = getPanel(db, ticket.panel_id);
     const topic = topicFor(panel, ticket.topic_id);
+    if (parts[1] === 'delete') {
+      if (!hasAccessLevel(db, interaction, ACCESS_LEVELS.mod)) return interaction.reply({ content: 'Only bot moderators can delete tickets.', ephemeral: true });
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        await interaction.channel.delete('Ticket deleted by bot moderator');
+        db.prepare('DELETE FROM tickets WHERE id = ? AND guild_id = ?').run(ticket.id, interaction.guildId);
+        return interaction.editReply({ content: 'Ticket deleted.' });
+      } catch (error) {
+        console.error('Ticket deletion failed:', error);
+        return interaction.editReply({ content: 'The ticket could not be deleted. Check the bot’s Manage Channels permission and try again.' });
+      }
+    }
     if (parts[1] !== 'priority' && !canModerate(db, interaction.guildId, interaction.member, panel) && interaction.user.id !== ticket.opener_id) return interaction.reply({ content: 'You cannot use this ticket control.', ephemeral: true });
     if (parts[1] === 'close') {
       if (interaction.user.id !== ticket.opener_id && !canModerate(db, interaction.guildId, interaction.member, panel)) return interaction.reply({ content: 'Only the ticket owner or staff can close this ticket.', ephemeral: true });
