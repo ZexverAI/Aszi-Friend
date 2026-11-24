@@ -16,8 +16,10 @@ export function hasTicketModerationAccess(db,guildId,member,panel){
 export function getTicketAccessTargets(db,guildId){
  return {roles:db.prepare('SELECT role_id FROM authorized_admin_roles WHERE guild_id=?').all(guildId).map(x=>x.role_id),users:db.prepare('SELECT user_id FROM authorized_admin_users WHERE guild_id=?').all(guildId).map(x=>x.user_id)};
 }
+export function getStoredGrantLevel(db,guildId,type,id){const table=type==='role'?'authorized_admin_roles':'authorized_admin_users',key=type==='role'?'role_id':'user_id';return Number(db.prepare(`SELECT access_level FROM ${table} WHERE guild_id=? AND ${key}=?`).get(guildId,id)?.access_level)||0;}
 export function grantAccess(db,guildId,type,id,level,by){
  const table=type==='role'?'authorized_admin_roles':'authorized_admin_users',key=type==='role'?'role_id':'user_id',row=db.prepare(`SELECT access_level FROM ${table} WHERE guild_id=? AND ${key}=?`).get(guildId,id);
+ if(row&&Number(row.access_level)===3&&by!==BOT_OWNER_ID&&level!==3)return'protected';
  if(row&&Number(row.access_level)===level){db.prepare(`DELETE FROM ${table} WHERE guild_id=? AND ${key}=?`).run(guildId,id);return'removed';}
  db.prepare(`INSERT INTO ${table}(guild_id,${key},access_level,granted_by) VALUES(?,?,?,?) ON CONFLICT(guild_id,${key}) DO UPDATE SET access_level=excluded.access_level,granted_by=excluded.granted_by,created_at=CURRENT_TIMESTAMP`).run(guildId,id,level,by);
  return row?'updated':'granted';

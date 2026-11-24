@@ -9,6 +9,6 @@ const u=i.options.getString('user_id'),r=i.options.getString('role_id');if(Boole
 const type=u?'user':'role',id=u??r;if(!/^\d{15,22}$/.test(id))return i.reply({content:'Invalid Discord ID.',ephemeral:true});
 if(type==='user'&&id===BOT_OWNER_ID)return i.reply({content:'The owner has permanent access.',ephemeral:true});
 if(type==='role'){const role=await i.guild.roles.fetch(id).catch(()=>null);if(!role||role.id===i.guild.roles.everyone.id||role.managed)return i.reply({content:'Choose a valid unmanaged role from this server.',ephemeral:true});}
-const result=grantAccess(db,i.guildId,type,id,ACCESS_LEVELS.smod,i.user.id);const sync=await syncGrantAfterToggle(i.guild,db,type,id,result);
+const result=grantAccess(db,i.guildId,type,id,ACCESS_LEVELS.smod,i.user.id);if(result==='protected')return i.reply({content:'Only the bot owner can change or remove an existing tmod grant.',ephemeral:true});const sync=await syncGrantAfterToggle(i.guild,db,type,id,result);
 const label=type==='role'?'<@&'+id+'>':'<@'+id+'>';const verb=result==='removed'?'removed':result==='updated'?'updated':'granted';
 return i.reply({content:'Bot-only smod access '+verb+' for '+label+'. Discord role memberships were not changed.'+(sync.failed?' Existing ticket channels failed to update: '+sync.failed+'.':''),ephemeral:true,allowedMentions:{parse:[]}});}};

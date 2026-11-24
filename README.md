@@ -37,6 +37,7 @@ The ticket includes a randomly selected reassurance message (30 variants) explai
 - `/opentopic topic:<topic>` allows new tickets for that topic again.
 - `/addlanguage language:<language>` enables English, Polish, German, Spanish, or French for ticket forms without posting another panel.
 - `/removelanguage language:<language>` disables a language without posting another panel. At least one language must remain enabled.
+- `/helpop what_happened:<text>` opens a private thread in the current channel for the requester and bot-authorized moderators. Moderators can mark it read to ping granted mod roles; the requester or a moderator can delete it.
 - `/mod`, `/smod`, and `/tmod` grant or toggle bot-only permission levels for one user ID or role ID.
 - `/grantrole level:<mod|smod|tmod>` assigns a selected level to exactly one user ID or role ID; repeating the same grant toggles it off.
 - `/revokerole` removes a user's or role's bot-only access.
@@ -60,7 +61,7 @@ The detector is a local rule-based writing-pattern indicator. Scores display as 
 
 ## Command access
 
-Bot owner: Discord user ID `1191814686644117537` always has tmod access and cannot be demoted. Grants are internal to this bot, stored per server in SQLite, and never change Discord role memberships. Role grants apply to role members and grant ticket-channel visibility. Mod is ticket-only; smod can use regular bot administration commands; tmod can also manage access grants. Existing role grants migrate as smod.
+Bot owner: Discord user ID `1191814686644117537` always has tmod access and cannot be demoted. Only the owner can grant, downgrade, or remove another tmod grant. Grants are internal to this bot, stored per server in SQLite, and never change Discord role memberships. Role grants apply to role members and grant ticket-channel visibility. Mod is ticket-only; smod can use regular bot administration commands; tmod can also manage access grants. Existing role grants migrate as smod.
 
 ## Development
 

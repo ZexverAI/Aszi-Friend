@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { ACCESS_LEVELS, BOT_OWNER_ID, hasAccessLevel, revokeAccess } from '../services/authorization.js';
+import { ACCESS_LEVELS, BOT_OWNER_ID, getStoredGrantLevel, hasAccessLevel, isOwner, revokeAccess } from '../services/authorization.js';
 import { syncGrantAfterToggle } from '../services/permission-access.js';
 export default {data:new SlashCommandBuilder().setName('revokerole').setDescription('Remove bot-only access from a user or role.')
 .addStringOption(o=>o.setName('user_id').setDescription('Discord user ID').setRequired(false)).addStringOption(o=>o.setName('role_id').setDescription('Discord role ID').setRequired(false)),
 async execute(i,{db}){if(!hasAccessLevel(db,i,ACCESS_LEVELS.tmod))return i.reply({content:'Only tmod can revoke access.',ephemeral:true});
 const u=i.options.getString('user_id'),r=i.options.getString('role_id');if(Boolean(u)===Boolean(r))return i.reply({content:'Provide exactly one of user_id or role_id.',ephemeral:true});
 const type=u?'user':'role',id=u??r;if(!/^\d{15,22}$/.test(id))return i.reply({content:'Invalid Discord ID.',ephemeral:true});if(type==='user'&&id===BOT_OWNER_ID)return i.reply({content:'The owner has permanent access.',ephemeral:true});
-const removed=revokeAccess(db,i.guildId,type,id),sync=await syncGrantAfterToggle(i.guild,db,type,id,removed?'removed':'unchanged');return i.reply({content:removed?'Bot-only access revoked.'+(sync.failed?' Failed ticket updates: '+sync.failed+'.':''):'No grant found.',ephemeral:true});}};
+if(getStoredGrantLevel(db,i.guildId,type,id)===ACCESS_LEVELS.tmod&&!isOwner(i.user.id))return i.reply({content:'Only the bot owner can remove a tmod grant.',ephemeral:true});const removed=revokeAccess(db,i.guildId,type,id),sync=await syncGrantAfterToggle(i.guild,db,type,id,removed?'removed':'unchanged');return i.reply({content:removed?'Bot-only access revoked.'+(sync.failed?' Failed ticket updates: '+sync.failed+'.':''):'No grant found.',ephemeral:true});}};

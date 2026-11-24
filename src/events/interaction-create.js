@@ -3,7 +3,7 @@ import { getPanel } from '../services/panel-service.js';
 import { openTicket } from '../services/ticket-service.js';
 import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
-import { ADMIN_COMMANDS, ACCESS_LEVELS, hasAccessLevel, hasTicketModerationAccess, isAuthorizedForAdmin } from '../services/authorization.js';
+import { ADMIN_COMMANDS, ACCESS_LEVELS, getAccessLevel, hasAccessLevel, hasTicketModerationAccess, isAuthorizedForAdmin } from '../services/authorization.js';
 
 const LANGUAGES = { en: 'English', pl: 'Polski', de: 'Deutsch', es: 'Español', fr: 'Français' };
 const PRIORITIES = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'];
@@ -72,6 +72,31 @@ export default async function handleInteraction(interaction, context) {
 
   if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
   const parts = interaction.customId.split(':');
+  if (parts[0] === 'helpop' && interaction.isButton()) {
+    const authorId = parts[2];
+    const isModerator = hasAccessLevel(db, interaction, ACCESS_LEVELS.mod);
+    if (parts[1] === 'read') {
+      if (!isModerator) return interaction.reply({ content: 'Only bot moderators can mark a help request as read.', ephemeral: true });
+      const roles = db.prepare('SELECT role_id FROM authorized_admin_roles WHERE guild_id = ? AND access_level >= ?').all(interaction.guildId, ACCESS_LEVELS.mod).map(({ role_id }) => role_id).slice(0, 100);
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('helpop:delete:' + authorId).setLabel('Delete').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('helpop:read:' + authorId).setLabel('Select as read').setStyle(ButtonStyle.Primary).setDisabled(true),
+      );
+      await interaction.update({ components: [row] });
+      const mentions = roles.map((id) => '<@&' + id + '>').join(' ');
+      await interaction.channel.send({
+        content: [mentions, 'Help request marked as read by ' + interaction.user.username + '.'].filter(Boolean).join('\n'),
+        allowedMentions: { roles, parse: [] },
+      });
+      return;
+    }
+    if (parts[1] === 'delete') {
+      if (interaction.user.id !== authorId && !isModerator) return interaction.reply({ content: 'Only the requester or a bot moderator can delete this help request.', ephemeral: true });
+      await interaction.reply({ content: 'Help request deleted.', ephemeral: true });
+      await interaction.channel.delete('Helpop request deleted').catch(() => null);
+      return;
+    }
+  }
 
   if (parts[0] === 'panel' && interaction.isButton() && parts[1] === 'create') {
     const panel = getPanel(db, parts[2]);
