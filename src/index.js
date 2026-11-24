@@ -8,7 +8,6 @@ import { createCommandSynchronizer } from './services/command-sync.js';
 const db = openDatabase(config.databasePath);
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 client.commands = new Collection();
-client.wizards = new Map();
 await loadCommands(client);
 const commandSync = createCommandSynchronizer(client, config.token);
 client.once(Events.ClientReady, async (readyClient) => {
