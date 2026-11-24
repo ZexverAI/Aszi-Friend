@@ -6,7 +6,7 @@ A Discord ticket bot built with Node.js 22, discord.js 14, and Node's built-in S
 
 1. Set `DISCORD_TOKEN` in FadeHost's environment settings.
 2. Start with `npm start`.
-3. Invite the bot with the `bot` and `applications.commands` scopes. It needs permissions to view channels, send messages, create channels, manage channel permissions, and manage private threads.
+3. Invite the bot with the `bot` and `applications.commands` scopes. It needs permissions to view channels, send messages, embed links, create channels, manage channel permissions, and manage private threads.
 4. Use `/sentpanel` in the channel where the panel should appear.
 
 The bot synchronizes both global and guild slash commands when it starts, replacing old command lists with the current commands. Guild commands are available immediately. `DISCORD_TOKEN` is the only required environment variable. Never commit a token or `.env` file.
