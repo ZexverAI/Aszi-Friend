@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits, ThreadAutoArchiveDuration } from 'discord.js';
 import { getPanel, getOrCreateTicketPanel } from '../services/panel-service.js';
 import { openTicket } from '../services/ticket-service.js';
-import { reviewApplication, renderSemicircle } from '../lib/ai-review.js';
+import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
 import { ADMIN_COMMANDS, isAuthorizedForAdmin, isOwner } from '../services/authorization.js';
 
@@ -115,8 +115,8 @@ export default async function handleInteraction(interaction, context) {
       if (!topic?.application) return interaction.reply({ content: 'AI opinion is available only for applications.', ephemeral: true });
       const result = reviewApplication(JSON.parse(ticket.submission_json || '{}'));
       const detectorEnabled = panel.config.aiDetector !== false && topic.aiDetector !== false;
-      const detail = detectorEnabled ? result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${field.score}/100`} — ${field.reasons.join(' ')}`).join('\n') : 'Text pattern review is disabled for this topic.';
-      const pattern = !detectorEnabled ? 'Text pattern detector is disabled for this topic.' : result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum).' : 'Text pattern indicator: ' + result.patternScore + '/100. This is not an AI probability or proof of authorship.\n\n' + renderSemicircle(result.patternScore);
+      const detail = detectorEnabled ? result.fieldReviews.map((field) => `• ${field.label}: ${field.score == null ? 'insufficient text' : `pattern index ${formatScore(field.score, ticket.language)}`} — ${field.reasons.join(' ')}`).join('\n') : 'Text pattern review is disabled for this topic.';
+      const pattern = !detectorEnabled ? 'Text pattern detector is disabled for this topic.' : result.patternScore == null ? 'Text pattern indicator: insufficient text (30-word minimum).' : 'Text pattern indicator: ' + formatScore(result.patternScore, ticket.language) + '. This is not an AI probability or proof of authorship.\n\n' + renderSemicircle(result.patternScore);
       const embed = new EmbedBuilder().setTitle(t(ticket.language, 'reviewTitle')).setDescription(`Application completeness score: ${result.applicationScore}/100 (a basic completeness heuristic).\n\n${pattern}\n\n${result.reasons.map((reason) => `• ${reason}`).join('\n')}\n\nPer-field review:\n${detail || 'No form answers to review.'}\n\nUse this as a prompt for human review, never as proof or the sole basis for a decision.`).setColor(0x5865f2);
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
