@@ -79,7 +79,7 @@ export function analyzeText(text) {
   const reasons = [];
   if (matchedReferenceGroups.length) reasons.push(`Matched ${matchedReferenceGroups.length} broad style group(s) from the supplied ${SUPPLIED_CV_REFERENCE.label} reference.`);
   if (headingHits.length >= 2) reasons.push(`Found ${headingHits.length} familiar CV section headings in a highly structured layout.`);
-  if (matchedReferenceGroups.length >= 2 && headingHits.length >= 3 && !hasConcreteEvidence) reasons.push('Several claims are broad and lack measurable examples, links, or named project details.');
+  if (matchedReferenceGroups.length >= 2 && headingHits.length >= 3 && !hasConcreteEvidence) reasons.push('Several claims are broad and lack quantified evidence, dates, or links.');
   if (commonPhraseHits.length) reasons.push(`Found ${commonPhraseHits.length} generic transition or filler phrase pattern(s).`);
   if (variance < 18 && sentences.length >= 6) reasons.push('Sentence lengths are unusually consistent.');
   if (repeatedStarters >= 2) reasons.push('Several sentences repeat the same opening pattern.');
