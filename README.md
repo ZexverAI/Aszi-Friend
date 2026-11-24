@@ -32,6 +32,7 @@ The ticket includes a randomly selected reassurance message (30 variants) explai
 ## Commands
 
 - `/sentpanel` posts the panel in the current channel and can update its settings.
+- `/announce` opens a title-and-description form and publishes a gray embed announcement in the current channel.
 - `/closetopic topic:<topic>` stops new tickets for that topic.
 - `/opentopic topic:<topic>` allows new tickets for that topic again.
 - `/addlanguage language:<language>` enables English, Polish, German, Spanish, or French for ticket forms without posting another panel.
