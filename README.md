@@ -15,7 +15,7 @@ The bot synchronizes both global and guild slash commands when it starts, replac
 
 `/sentpanel` posts a panel message with the FAQ and rules reminder and a **🎫 Create Ticket** button. The FAQ link is `<#1574181136026964180>`. No panel is posted until an authorized person invokes the command.
 
-On button click, the user chooses one of these topics, a supported language, and a priority:
+On button click, one modal form opens with topic, language, priority, and text fields together. Discord modals allow select menus and text inputs in the same form. The second text field is reserved for application CV continuation; it must be left empty for other topics.
 
 - General Support
 - Business Inquiries
