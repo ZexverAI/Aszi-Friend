@@ -54,7 +54,7 @@ The panel defaults to English and enables English, Polish, German, Spanish, and 
 
 ## Review limits
 
-The detector is a local rule-based writing-pattern indicator. It does not call an external AI service, cannot determine who wrote a text, and does not output an AI probability. It runs only on Super Suggestions and application topics, and can be disabled per topic. Text shorter than 30 words is marked insufficient. The semicircle visual represents the pattern index, not a probability. The application completeness score is also a simple heuristic. Use these results only as review aids, never as proof or the sole basis for a decision.
+The detector is a local rule-based writing-pattern indicator. It does not call an external AI service, cannot determine who wrote a text, and does not output an AI probability. It runs only on Super Suggestions and application topics, and can be disabled per topic. The owner-supplied junior developer CV calibration example is stored in `docs/ai-review-reference-example.md`; the analyzer uses its broad patterns rather than exact-text matching. Text shorter than 30 words is marked insufficient. The semicircle visual represents the pattern index, not a probability. The application completeness score is also a simple heuristic. Use these results only as review aids, never as proof or the sole basis for a decision.
 
 ## Command access
 
