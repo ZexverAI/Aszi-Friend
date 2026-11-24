@@ -24,6 +24,25 @@ export default async function handleInteraction(interaction, context) {
     return;
   }
 
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('announce:')) {
+    const [, channelId, ownerId] = interaction.customId.split(':');
+    if (!interaction.inGuild() || ownerId !== interaction.user.id) return interaction.reply({ content: 'This announcement form is not valid for your account.', ephemeral: true });
+    if (!isAuthorizedForAdmin(interaction, db)) return interaction.reply({ content: 'You are not authorized to publish announcements.', ephemeral: true });
+
+    const title = interaction.fields.getTextInputValue('announcement_title').trim();
+    const description = interaction.fields.getTextInputValue('announcement_description').trim();
+    if (!title || !description) return interaction.reply({ content: 'Both the announcement title and description are required.', ephemeral: true });
+
+    const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
+    if (!channel?.isTextBased()) return interaction.reply({ content: 'The original channel is no longer available.', ephemeral: true });
+    const embed = new EmbedBuilder()
+      .setColor(0x808080)
+      .setTitle(title)
+      .setDescription(description);
+    await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+    return interaction.reply({ content: 'Announcement sent.', ephemeral: true });
+  }
+
   if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket:form:')) {
     const panelId = interaction.customId.split(':')[2];
     const topicId = interaction.fields.getStringSelectValues('form_topic')?.[0];
