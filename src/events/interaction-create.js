@@ -3,11 +3,11 @@ import { getPanel } from '../services/panel-service.js';
 import { openTicket } from '../services/ticket-service.js';
 import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
 import { t } from '../lib/locales.js';
-import { ADMIN_COMMANDS, isAuthorizedForAdmin, isOwner } from '../services/authorization.js';
+import { ADMIN_COMMANDS, ACCESS_LEVELS, hasAccessLevel, hasTicketModerationAccess, isAuthorizedForAdmin } from '../services/authorization.js';
 
 const LANGUAGES = { en: 'English', pl: 'Polski', de: 'Deutsch', es: 'Español', fr: 'Français' };
 const PRIORITIES = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'World-collapsing ☄️'];
-const canModerate = (member, panel) => member.permissions.has(PermissionFlagsBits.ManageChannels) || (panel?.config.staffRoleIds ?? []).some((id) => member.roles.cache.has(id));
+const canModerate = (db, guildId, member, panel) => hasTicketModerationAccess(db, guildId, member, panel);
 const topicFor = (panel, id) => panel?.config.topics?.find((topic) => topic.id === id);
 const topicOpen = (panel, id) => topicFor(panel, id)?.enabled !== false && Boolean(topicFor(panel, id));
 
@@ -16,8 +16,8 @@ export default async function handleInteraction(interaction, context) {
   if (interaction.isChatInputCommand()) {
     if (ADMIN_COMMANDS.has(interaction.commandName)) {
       if (!interaction.inGuild()) return interaction.reply({ content: 'Run ticket administration commands in a server.', ephemeral: true });
-      if (!isAuthorizedForAdmin(interaction, db)) return interaction.reply({ content: 'You are not authorized to use ticket administration commands.', ephemeral: true });
-      if (['grantrole', 'revokerole'].includes(interaction.commandName) && !isOwner(interaction.user.id)) return interaction.reply({ content: 'Only the bot owner can authorize or revoke roles.', ephemeral: true });
+      const needed = interaction.commandName === 'mod' ? 2 : ['smod','tmod','grantrole','revokerole'].includes(interaction.commandName) ? 3 : 2;
+      if (!hasAccessLevel(db, interaction, needed)) return interaction.reply({ content: 'You do not have the required bot access level for this command.', ephemeral: true });
     }
     const command = client.commands.get(interaction.commandName);
     if (command) await command.execute(interaction, context);
@@ -134,20 +134,20 @@ export default async function handleInteraction(interaction, context) {
     if (!ticket) return interaction.reply({ content: 'Ticket record not found.', ephemeral: true });
     const panel = getPanel(db, ticket.panel_id);
     const topic = topicFor(panel, ticket.topic_id);
-    if (parts[1] !== 'priority' && !canModerate(interaction.member, panel) && interaction.user.id !== ticket.opener_id) return interaction.reply({ content: 'You cannot use this ticket control.', ephemeral: true });
+    if (parts[1] !== 'priority' && !canModerate(db, interaction.guildId, interaction.member, panel) && interaction.user.id !== ticket.opener_id) return interaction.reply({ content: 'You cannot use this ticket control.', ephemeral: true });
     if (parts[1] === 'close') {
-      if (interaction.user.id !== ticket.opener_id && !canModerate(interaction.member, panel)) return interaction.reply({ content: 'Only the ticket owner or staff can close this ticket.', ephemeral: true });
+      if (interaction.user.id !== ticket.opener_id && !canModerate(db, interaction.guildId, interaction.member, panel)) return interaction.reply({ content: 'Only the ticket owner or staff can close this ticket.', ephemeral: true });
       db.prepare("UPDATE tickets SET status='closed', closed_at=CURRENT_TIMESTAMP WHERE id=?").run(ticket.id);
       await interaction.channel.permissionOverwrites.edit(ticket.opener_id, { SendMessages: false });
       return interaction.reply({ content: t(ticket.language, 'closed') });
     }
     if (parts[1] === 'claim') {
-      if (!canModerate(interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
+      if (!canModerate(db, interaction.guildId, interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
       db.prepare('UPDATE tickets SET claimed_by=? WHERE id=?').run(interaction.user.id, ticket.id);
       return interaction.reply({ content: t(ticket.language, 'claimed', { user: interaction.user }) });
     }
     if (parts[1] === 'ai') {
-      if (!canModerate(interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
+      if (!canModerate(db, interaction.guildId, interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
       if (!topic?.application) return interaction.reply({ content: 'AI opinion is available only for applications.', ephemeral: true });
       const result = reviewApplication(JSON.parse(ticket.submission_json || '{}'));
       const detectorEnabled = panel.config.aiDetector !== false && topic.aiDetector !== false;
@@ -161,12 +161,12 @@ export default async function handleInteraction(interaction, context) {
       return interaction.reply({ content: 'Select a priority:', components: [new ActionRowBuilder().addComponents(menu)], ephemeral: true });
     }
     if (parts[1] === 'modchat') {
-      if (!canModerate(interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
+      if (!canModerate(db, interaction.guildId, interaction.member, panel)) return interaction.reply({ content: 'Staff only.', ephemeral: true });
       if (panel.config.modChat === false || topic?.modChat === false) return interaction.reply({ content: 'Mod Chat is disabled for this panel/topic.', ephemeral: true });
       const roleIds = panel.config.modChatRoleIds ?? panel.config.staffRoleIds ?? [];
       const members = await interaction.guild.members.fetch();
       const thread = await interaction.channel.threads.create({ name: 'moderation-only', type: 12, invitable: false, autoArchiveDuration: ThreadAutoArchiveDuration.OneDay, reason: 'Private moderator discussion' });
-      const selected = [...new Set(members.filter((member) => roleIds.some((id) => member.roles.cache.has(id))).map((member) => member.id))].slice(0, 50);
+      const selected = [...new Set(members.filter((member) => roleIds.some((id) => member.roles.cache.has(id)) || hasTicketModerationAccess(db, interaction.guildId, member, panel)).map((member) => member.id))].slice(0, 50)
       for (const userId of selected) await thread.members.add(userId).catch(() => null);
       return interaction.reply({ content: `Private moderation thread created: ${thread}`, ephemeral: true });
     }

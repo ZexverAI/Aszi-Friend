@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { t } from '../lib/locales.js';
 import { reviewApplication, renderSemicircle, formatScore } from '../lib/ai-review.js';
+import { getTicketAccessTargets } from './authorization.js';
 
 const REASSURANCE = [
   'Our moderation team is doing its best to help you. Tickets are checked regularly, around the clock; during busy periods, replies may take longer.',
@@ -39,11 +40,13 @@ const PRIORITIES = ['Turtle 🐢', 'Low 🟢', 'Standard ⚪', 'High 🔴', 'Wor
 export async function openTicket({ db, interaction, panel, topic, answers, language, priority }) {
   const guild = interaction.guild;
   const staffRoleIds = panel.config.staffRoleIds ?? [];
+  const access = getTicketAccessTargets(db, guild.id);
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
     { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageThreads] },
-    ...staffRoleIds.filter((id) => guild.roles.cache.has(id)).map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] })),
+    ...[...new Set([...staffRoleIds.filter((id) => guild.roles.cache.has(id)), ...access.roles])].map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] })),
+    ...[...new Set(access.users)].filter((id) => id !== interaction.user.id).map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] })),
   ];
   const channel = await guild.channels.create({
     name: `ticket-${interaction.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 90),

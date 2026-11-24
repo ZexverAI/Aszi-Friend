@@ -37,8 +37,9 @@ The ticket includes a randomly selected reassurance message (30 variants) explai
 - `/opentopic topic:<topic>` allows new tickets for that topic again.
 - `/addlanguage language:<language>` enables English, Polish, German, Spanish, or French for ticket forms without posting another panel.
 - `/removelanguage language:<language>` disables a language without posting another panel. At least one language must remain enabled.
-- `/grantrole role:<role>` gives a role access to ticket administration commands (bot owner only).
-- `/revokerole role:<role>` removes that access (bot owner only).
+- `/mod`, `/smod`, and `/tmod` grant or toggle bot-only permission levels for one user ID or role ID.
+- `/grantrole level:<mod|smod|tmod>` assigns a selected level to exactly one user ID or role ID; repeating the same grant toggles it off.
+- `/revokerole` removes a user's or role's bot-only access.
 
 `/sentpanel` options:
 
@@ -59,7 +60,7 @@ The detector is a local rule-based writing-pattern indicator. Scores display as 
 
 ## Command access
 
-Bot owner: Discord user ID `1191814686644117537`. The owner can use all ticket administration commands and is the only user who can run `/grantrole` and `/revokerole`. Role grants apply only in the current server and are stored in SQLite. Ticket staff roles do not automatically gain command access.
+Bot owner: Discord user ID `1191814686644117537` always has tmod access and cannot be demoted. Grants are internal to this bot, stored per server in SQLite, and never change Discord role memberships. Role grants apply to role members and grant ticket-channel visibility. Mod is ticket-only; smod can use regular bot administration commands; tmod can also manage access grants. Existing role grants migrate as smod.
 
 ## Development
 
