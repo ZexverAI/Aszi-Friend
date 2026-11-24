@@ -1,6 +1,7 @@
 export const BOT_OWNER_ID = '1191814686644117537';
 export const ADMIN_COMMANDS = new Set([
   'sentpanel',
+  'announce',
   'closetopic',
   'opentopic',
   'addlanguage',
